@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+results/*.csv
+results/*.png
+results/*.pdf
+results/*.log
+results/*.txt
+results/.matplotlib/
