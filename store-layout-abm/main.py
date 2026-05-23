@@ -20,6 +20,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--layout", choices=LAYOUT_NAMES, default="grid")
     parser.add_argument("--shoppers", type=int, default=40)
     parser.add_argument("--steps", type=int, default=250)
+    parser.add_argument(
+        "--days",
+        type=int,
+        default=1,
+        help="Number of simulated days for a single simulation.",
+    )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--promotion-level", type=float, default=0.25)
     parser.add_argument("--results-dir", default="results")
@@ -33,8 +39,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--runs",
         type=int,
-        default=5,
-        help="Number of repetitions per scenario when using --experiment.",
+        default=None,
+        help="Number of repetitions per scenario when using --experiment. If omitted, --days can be used as the run count.",
     )
     parser.add_argument(
         "--densities",
@@ -50,15 +56,22 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
-    args = build_parser().parse_args()
+    parser = build_parser()
+    args = parser.parse_args()
+    if args.days <= 0:
+        parser.error("--days must be positive.")
+    if args.runs is not None and args.runs <= 0:
+        parser.error("--runs must be positive.")
+
     results_dir = Path(args.results_dir)
     make_plots = not args.no_plots
 
     if args.experiment:
+        experiment_runs = args.runs if args.runs is not None else (args.days if args.days != 1 else 5)
         results = run_experiment(
             layouts=parse_layouts(args.layouts),
             shopper_counts=parse_int_list(args.densities),
-            runs=args.runs,
+            runs=experiment_runs,
             steps=args.steps,
             promotion_level=args.promotion_level,
             output_dir=results_dir,
@@ -79,9 +92,13 @@ def main() -> None:
         promotion_level=args.promotion_level,
         output_dir=results_dir,
         make_plots=make_plots,
+        days=args.days,
     )
     printable = {key: value for key, value in summary.items() if not key.endswith("_file")}
-    print("\nSingle simulation complete:\n")
+    if args.days == 1:
+        print("\nSingle simulation complete:\n")
+    else:
+        print(f"\nMulti-day simulation complete ({args.days} days). Daily averages:\n")
     for key, value in printable.items():
         print(f"{key}: {value}")
     print(f"\nSaved results to: {results_dir.resolve()}")

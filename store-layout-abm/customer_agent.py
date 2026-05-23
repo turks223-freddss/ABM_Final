@@ -71,7 +71,19 @@ SHOPPER_PROFILES = {
 class CustomerAgent(Agent):
     """Shopper agent with planned-list and impulse-purchase behavior."""
 
-    def __init__(self, uid: int, model, shopper_type: str, shopping_list: List[str]) -> None:
+    PATIENCE_TIME_COST = 0.65
+    PATIENCE_TRAFFIC_COST_PER_SHOPPER = 0.10
+    MAX_TRAFFIC_PATIENCE_COST = 0.80
+    PATIENCE_CONGESTION_DELAY_COST = 0.75
+
+    def __init__(
+        self,
+        uid: int,
+        model,
+        shopper_type: str,
+        shopping_list: List[str],
+        arrival_time: int = 0,
+    ) -> None:
         self._init_mesa_agent(uid, model)
         if shopper_type not in SHOPPER_PROFILES:
             raise ValueError(f"Unknown shopper type '{shopper_type}'.")
@@ -80,19 +92,33 @@ class CustomerAgent(Agent):
         self.shopper_type = shopper_type
         self.profile = SHOPPER_PROFILES[shopper_type]
         self.shopping_list = list(shopping_list)
+        self.shopping_list_names = set(shopping_list)
         self.remaining_items = list(shopping_list)
         self.abandoned_items: List[str] = []
+        self.max_patience = float(self.profile.patience)
+        self.patience_level = self.max_patience
+        self.patience_lost_to_congestion = 0.0
+        self.abandoned = False
+        self.abandonment_time: Optional[int] = None
+        self.abandonment_reason: Optional[str] = None
 
         self.bought_item_names: Set[str] = set()
         self.seen_item_names: Set[str] = set()
         self.planned_purchases: List[str] = []
         self.impulse_purchases: List[str] = []
+        self.unlisted_purchases: List[str] = []
         self.basket_value = 0.0
         self.basket_profit = 0.0
+        self.abandoned_value = 0.0
+        self.abandoned_profit = 0.0
 
-        self.state = "shopping"
+        self.arrival_time = max(0, arrival_time)
+        self.arrived = False
+        self.state = "waiting"
         self.time_spent = 0
         self.checkout_wait = 0
+        self.checkout_wait_initial = 0
+        self.checkout_time_spent = 0
         self.completed = False
         self.completion_time: Optional[int] = None
         self.exposure_count = 0
@@ -105,32 +131,77 @@ class CustomerAgent(Agent):
         except TypeError:
             super().__init__(uid, model)
 
+    def enter_store(self) -> None:
+        if self.arrived:
+            return
+
+        self.arrived = True
+        self.state = "shopping"
+        self.model.grid.place_agent(self, self.model.layout.entrance)
+        self.path_history.append(self.model.layout.entrance)
+
     def step(self) -> None:
-        if self.completed:
+        if self.completed or not self.arrived:
             return
 
         self.time_spent += 1
+        if self._reduce_patience(self.PATIENCE_TIME_COST, "time"):
+            return
+
         self._interact_with_visible_items()
 
         if self.state == "checkout":
             self._process_checkout()
             return
 
-        if self.remaining_items and self.time_spent > self.profile.patience:
-            if self.model.random.random() < 0.10:
-                self.abandoned_items.extend(self.remaining_items)
-                self.remaining_items.clear()
-
         target = self._choose_target()
         if target == self.model.layout.checkout and self.pos == self.model.layout.checkout:
             self._enter_checkout()
             return
 
-        self._move_toward(target)
+        if self._move_toward(target):
+            return
+
         self._interact_with_visible_items()
 
         if not self.remaining_items and self.pos == self.model.layout.checkout:
             self._enter_checkout()
+
+    def _reduce_patience(self, amount: float, reason: str) -> bool:
+        if self.state != "shopping" or not self.remaining_items or amount <= 0:
+            return False
+
+        self.patience_level = max(0.0, self.patience_level - amount)
+        if reason in {"traffic", "congestion"}:
+            self.patience_lost_to_congestion += amount
+
+        if self.patience_level <= 0:
+            self._abandon_shopping(reason)
+            return True
+        return False
+
+    def _abandon_shopping(self, reason: str) -> None:
+        if self.completed:
+            return
+
+        self.abandoned = True
+        self.completed = True
+        self.state = "abandoned"
+        self.abandonment_time = self.time_spent
+        self.abandonment_reason = reason
+        self.abandoned_items.extend(self.remaining_items)
+        self.abandoned_value = sum(
+            self.model.layout.items_by_name[name].sale_price
+            for name in self.abandoned_items
+            if name in self.model.layout.items_by_name
+        )
+        self.abandoned_profit = sum(
+            self.model.layout.items_by_name[name].profit
+            for name in self.abandoned_items
+            if name in self.model.layout.items_by_name
+        )
+        self.model.record_abandonment(self, reason)
+        self.remaining_items.clear()
 
     def _choose_target(self):
         if not self.remaining_items:
@@ -160,12 +231,21 @@ class CustomerAgent(Agent):
             return zone or item.location
         return item.location
 
-    def _move_toward(self, target) -> None:
+    def _move_toward(self, target) -> bool:
         local_crowd = self.model.count_customers_near(self.pos, radius=1, include_self=False)
+        traffic_cost = min(
+            self.MAX_TRAFFIC_PATIENCE_COST,
+            local_crowd * self.PATIENCE_TRAFFIC_COST_PER_SHOPPER,
+        )
+        if local_crowd and self._reduce_patience(traffic_cost, "traffic"):
+            return True
+
         delay_probability = min(0.55, local_crowd * 0.075)
         if self.model.random.random() < delay_probability:
             self.congestion_delay += 1
-            return
+            if self._reduce_patience(self.PATIENCE_CONGESTION_DELAY_COST, "congestion"):
+                return True
+            return False
 
         step = self.model.layout.next_step(
             start=self.pos,
@@ -177,6 +257,7 @@ class CustomerAgent(Agent):
         if step != self.pos:
             self.model.grid.move_agent(self, step)
         self.path_history.append(self.pos)
+        return False
 
     def _interact_with_visible_items(self) -> None:
         for item in self.model.layout.nearby_items(self.pos, self.profile.exposure_radius):
@@ -222,7 +303,8 @@ class CustomerAgent(Agent):
         self.bought_item_names.add(item.name)
         self.basket_value += item.sale_price
         self.basket_profit += item.profit
-        self.model.record_purchase(item, planned=planned)
+        on_shopping_list = item.name in self.shopping_list_names
+        self.model.record_purchase(item, planned=planned, on_shopping_list=on_shopping_list)
 
         if planned:
             self.planned_purchases.append(item.name)
@@ -231,14 +313,19 @@ class CustomerAgent(Agent):
         else:
             self.impulse_purchases.append(item.name)
 
+        if not on_shopping_list:
+            self.unlisted_purchases.append(item.name)
+
     def _enter_checkout(self) -> None:
         self.state = "checkout"
         self.checkout_wait = self.model.estimate_checkout_wait()
+        self.checkout_wait_initial = self.checkout_wait
         for item in self.model.layout.checkout_items():
             if item.name not in self.bought_item_names and self._will_buy_impulse(item, 0):
                 self._buy_item(item, planned=False)
 
     def _process_checkout(self) -> None:
+        self.checkout_time_spent += 1
         self.checkout_wait -= 1
         if self.checkout_wait <= 0:
             self.completed = True
@@ -253,7 +340,9 @@ class CustomerAgent(Agent):
 
     @property
     def satisfaction(self) -> float:
+        if self.abandoned:
+            return 0.0
         if self.completion_time is None:
             return 0.0
-        overtime = max(0, self.completion_time - self.profile.patience)
-        return max(0.0, 1.0 - overtime / max(1, self.profile.patience))
+        overtime = max(0, self.completion_time - self.max_patience)
+        return max(0.0, 1.0 - overtime / max(1.0, self.max_patience))

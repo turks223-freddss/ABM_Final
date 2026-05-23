@@ -98,7 +98,11 @@ def StoreMap(model: StoreModel):
         if item.promotion:
             ax.scatter([x + 0.23], [y + 0.23], marker="*", s=55, c="#facc15", edgecolors="#78350f", zorder=4)
 
-    active_customers = [customer for customer in model.customers if not customer.completed]
+    active_customers = [
+        customer
+        for customer in model.customers
+        if customer.arrived and not customer.completed
+    ]
     offsets = [
         (0.00, 0.00),
         (0.18, 0.00),
@@ -164,13 +168,29 @@ def LiveMetrics(model: StoreModel):
 | Metric | Value |
 | --- | ---: |
 | Finished shoppers | {summary["finished_shoppers"]} / {summary["shoppers"]} |
+| Abandoned shoppers | {summary["abandoned_shoppers"]} / {summary["shoppers"]} |
+| Waiting to arrive | {summary["waiting_shoppers"]} |
+| Unique shopping lists | {summary["unique_shopping_lists"]} / {summary["shoppers"]} |
 | Completion rate | {summary["completion_rate"]:.0%} |
+| Abandonment rate | {summary["abandonment_rate"]:.0%} |
+| Layout score | {summary["layout_score"]} / 100 |
 | Avg. completion time | {summary["avg_completion_time"]} steps |
+| Avg. checkout wait | {summary["avg_checkout_wait"]} steps |
+| Longest checkout queue | {summary["longest_checkout_queue"]} shoppers |
+| Avg. patience remaining | {summary["avg_patience_remaining"]} steps |
+| Avg. basket value | ${summary["avg_basket_value"]:.2f} |
+| Avg. basket profit | ${summary["avg_basket_profit"]:.2f} |
+| Avg. items per shopper | {summary["avg_items_per_shopper"]} |
 | Planned purchases | {summary["planned_purchases"]} |
 | Impulse purchases | {summary["impulse_purchases"]} |
+| Unlisted purchases | {summary["unlisted_purchases"]} |
+| Profit from unlisted purchases | ${summary["profit_from_unlisted"]:.2f} |
+| Abandoned list items | {summary["abandoned_list_items"]} |
+| Lost profit from abandonment | ${summary["lost_profit_from_abandonment"]:.2f} |
 | Revenue | ${summary["revenue"]:.2f} |
 | Profit | ${summary["profit"]:.2f} |
 | Avg. congestion delay | {summary["avg_congestion_delay"]} steps |
+| Avg. patience lost to congestion | {summary["avg_patience_lost_to_congestion"]} steps |
 """
     )
 
@@ -227,8 +247,25 @@ page = SolaraViz(
         (StoreMap, 0),
         (LiveMetrics, 0),
         make_plot_component({"profit": "tab:green", "revenue": "tab:blue"}, page=1),
-        make_plot_component({"active_shoppers": "tab:red", "finished_shoppers": "tab:purple"}, page=1),
-        make_plot_component({"planned_purchases": "tab:blue", "impulse_purchases": "tab:orange"}, page=2),
+        make_plot_component(
+            {
+                "active_shoppers": "tab:red",
+                "waiting_shoppers": "tab:gray",
+                "finished_shoppers": "tab:purple",
+                "abandoned_shoppers": "tab:brown",
+            },
+            page=1,
+        ),
+        make_plot_component(
+            {
+                "planned_purchases": "tab:blue",
+                "impulse_purchases": "tab:orange",
+                "unlisted_purchases": "tab:red",
+                "profit_from_unlisted": "tab:green",
+                "lost_profit_from_abandonment": "tab:brown",
+            },
+            page=2,
+        ),
     ],
     model_params=model_params,
     name="Store Layout ABM Live Simulation",

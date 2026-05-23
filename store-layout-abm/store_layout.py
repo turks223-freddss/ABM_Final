@@ -21,6 +21,7 @@ class StoreItem:
     visibility: float
     promotion: bool
     is_essential: bool
+    list_probability: float
     high_exposure: bool = False
 
     @property
@@ -32,6 +33,10 @@ class StoreItem:
     def profit(self) -> float:
         promotion_margin_penalty = 0.75 if self.promotion else 1.0
         return round(self.sale_price * self.margin * promotion_margin_penalty, 2)
+
+    @property
+    def list_probability_percent(self) -> float:
+        return round(self.list_probability * 100, 1)
 
 
 class StoreLayout:
@@ -185,31 +190,31 @@ class StoreLayout:
 
     def _place_items(self) -> None:
         item_specs = [
-            ("Apples", "produce", 3.50, 0.34, True),
-            ("Bananas", "produce", 2.40, 0.30, True),
-            ("Salad Pack", "produce", 5.20, 0.38, False),
-            ("Bread", "bakery", 3.10, 0.32, True),
-            ("Croissants", "bakery", 6.20, 0.48, False),
-            ("Milk", "dairy", 4.10, 0.27, True),
-            ("Cheese", "dairy", 6.50, 0.39, True),
-            ("Yoghurt", "dairy", 4.80, 0.35, False),
-            ("Chicken", "meat", 10.50, 0.31, True),
-            ("Sausages", "meat", 8.40, 0.34, False),
-            ("Chocolate", "snacks", 3.80, 0.52, False),
-            ("Chips", "snacks", 4.70, 0.50, False),
-            ("Soft Drink", "snacks", 5.40, 0.45, False),
-            ("Ice Cream", "frozen", 7.20, 0.41, False),
-            ("Frozen Pizza", "frozen", 8.90, 0.36, False),
-            ("Laundry Powder", "household", 13.50, 0.28, True),
-            ("Paper Towels", "household", 6.90, 0.30, False),
-            ("Checkout Gum", "checkout", 2.20, 0.58, False),
-            ("Checkout Mints", "checkout", 2.60, 0.57, False),
-            ("Batteries", "checkout", 6.00, 0.49, False),
+            ("Apples", "produce", 3.50, 0.34, True, 0.55),
+            ("Bananas", "produce", 2.40, 0.30, True, 0.52),
+            ("Salad Pack", "produce", 5.20, 0.38, False, 0.28),
+            ("Bread", "bakery", 3.10, 0.32, True, 0.62),
+            ("Croissants", "bakery", 6.20, 0.48, False, 0.20),
+            ("Milk", "dairy", 4.10, 0.27, True, 0.68),
+            ("Cheese", "dairy", 6.50, 0.39, True, 0.45),
+            ("Yoghurt", "dairy", 4.80, 0.35, False, 0.32),
+            ("Chicken", "meat", 10.50, 0.31, True, 0.42),
+            ("Sausages", "meat", 8.40, 0.34, False, 0.26),
+            ("Chocolate", "snacks", 3.80, 0.52, False, 0.18),
+            ("Chips", "snacks", 4.70, 0.50, False, 0.22),
+            ("Soft Drink", "snacks", 5.40, 0.45, False, 0.24),
+            ("Ice Cream", "frozen", 7.20, 0.41, False, 0.20),
+            ("Frozen Pizza", "frozen", 8.90, 0.36, False, 0.25),
+            ("Laundry Powder", "household", 13.50, 0.28, True, 0.18),
+            ("Paper Towels", "household", 6.90, 0.30, False, 0.16),
+            ("Checkout Gum", "checkout", 2.20, 0.58, False, 0.00),
+            ("Checkout Mints", "checkout", 2.60, 0.57, False, 0.00),
+            ("Batteries", "checkout", 6.00, 0.49, False, 0.00),
         ]
 
         used_positions: set[Position] = set()
         for spec in item_specs:
-            name, category, price, margin, essential = spec
+            name, category, price, margin, essential, list_probability = spec
             location = self._nearest_open_cell(self.zone_centers[category], used_positions)
             used_positions.add(location)
 
@@ -234,6 +239,7 @@ class StoreLayout:
                 visibility=min(0.95, base_visibility),
                 promotion=promotion,
                 is_essential=essential,
+                list_probability=list_probability,
                 high_exposure=high_exposure,
             )
             self.items.append(item)
@@ -391,6 +397,13 @@ class StoreLayout:
 
     def essential_item_names(self) -> List[str]:
         return [item.name for item in self.items if item.is_essential]
+
+    def listable_items(self) -> List[StoreItem]:
+        return [
+            item
+            for item in self.items
+            if item.category != "checkout" and item.list_probability > 0
+        ]
 
     def promotional_item_names(self) -> List[str]:
         return [item.name for item in self.items if item.promotion]
