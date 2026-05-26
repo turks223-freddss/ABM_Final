@@ -32,9 +32,12 @@ CATEGORY_COLORS = {
     "bakery": "#d97706",
     "dairy": "#38bdf8",
     "meat": "#ef4444",
+    "pantry": "#a16207",
+    "beverages": "#0ea5e9",
     "snacks": "#eab308",
     "frozen": "#60a5fa",
     "household": "#64748b",
+    "personal_care": "#14b8a6",
     "checkout": "#111827",
 }
 
@@ -98,6 +101,18 @@ def StoreMap(model: StoreModel):
         if item.promotion:
             ax.scatter([x + 0.23], [y + 0.23], marker="*", s=55, c="#facc15", edgecolors="#78350f", zorder=4)
 
+    ax.text(
+        0.01,
+        0.99,
+        f"{len(model.layout.items)} products",
+        transform=ax.transAxes,
+        ha="left",
+        va="top",
+        fontsize=8,
+        color="#334155",
+        bbox={"boxstyle": "round,pad=0.25", "facecolor": "white", "edgecolor": "#cbd5e1", "alpha": 0.9},
+    )
+
     active_customers = [
         customer
         for customer in model.customers
@@ -133,7 +148,8 @@ def StoreMap(model: StoreModel):
 
     ax.set_title(
         f"{model.layout_name.replace('_', ' ').title()} layout | "
-        f"Step {model.step_count} | Active {model.active_shopper_count} | "
+        f"{model.current_time_label} {model.current_traffic_period} | "
+        f"Active {model.active_shopper_count}/{model.target_active_shopper_count} | "
         f"Profit ${model.total_profit:.2f}",
         fontsize=12,
         pad=10,
@@ -167,6 +183,10 @@ def LiveMetrics(model: StoreModel):
 
 | Metric | Value |
 | --- | ---: |
+| Store time | {summary["current_store_time"]} |
+| Traffic period | {summary["traffic_period"]} |
+| Target traffic share | {summary["traffic_share"]:.0%} |
+| Target active shoppers | {summary["target_active_shoppers"]} |
 | Finished shoppers | {summary["finished_shoppers"]} / {summary["shoppers"]} |
 | Abandoned shoppers | {summary["abandoned_shoppers"]} / {summary["shoppers"]} |
 | Waiting to arrive | {summary["waiting_shoppers"]} |
@@ -174,10 +194,10 @@ def LiveMetrics(model: StoreModel):
 | Completion rate | {summary["completion_rate"]:.0%} |
 | Abandonment rate | {summary["abandonment_rate"]:.0%} |
 | Layout score | {summary["layout_score"]} / 100 |
-| Avg. completion time | {summary["avg_completion_time"]} steps |
-| Avg. checkout wait | {summary["avg_checkout_wait"]} steps |
+| Avg. completion time | {summary["avg_completion_minutes"]} minutes |
+| Avg. checkout wait | {summary["avg_checkout_wait"]} minutes |
 | Longest checkout queue | {summary["longest_checkout_queue"]} shoppers |
-| Avg. patience remaining | {summary["avg_patience_remaining"]} steps |
+| Avg. patience remaining | {summary["avg_patience_remaining"]} minutes |
 | Avg. basket value | ${summary["avg_basket_value"]:.2f} |
 | Avg. basket profit | ${summary["avg_basket_profit"]:.2f} |
 | Avg. items per shopper | {summary["avg_items_per_shopper"]} |
@@ -190,7 +210,7 @@ def LiveMetrics(model: StoreModel):
 | Revenue | ${summary["revenue"]:.2f} |
 | Profit | ${summary["profit"]:.2f} |
 | Avg. congestion delay | {summary["avg_congestion_delay"]} steps |
-| Avg. patience lost to congestion | {summary["avg_patience_lost_to_congestion"]} steps |
+| Avg. patience lost to congestion | {summary["avg_patience_lost_to_congestion"]} minutes |
 """
     )
 
@@ -203,20 +223,17 @@ model_params = {
         "values": list(LAYOUT_NAMES),
     },
     "num_shoppers": {
-        "type": "SliderInt",
-        "value": 40,
-        "label": "Number of shoppers",
-        "min": 5,
-        "max": 120,
-        "step": 5,
+        "type": "InputText",
+        "value": "400",
+        "label": "Daily shopper population",
     },
     "max_steps": {
         "type": "SliderInt",
-        "value": 250,
-        "label": "Max simulation steps",
-        "min": 50,
-        "max": 500,
-        "step": 25,
+        "value": 720,
+        "label": "Simulation steps (9 AM to 9 PM)",
+        "min": 120,
+        "max": 1440,
+        "step": 60,
     },
     "promotion_level": {
         "type": "SliderFloat",
@@ -250,6 +267,7 @@ page = SolaraViz(
         make_plot_component(
             {
                 "active_shoppers": "tab:red",
+                "target_active_shoppers": "tab:pink",
                 "waiting_shoppers": "tab:gray",
                 "finished_shoppers": "tab:purple",
                 "abandoned_shoppers": "tab:brown",

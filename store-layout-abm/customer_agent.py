@@ -14,6 +14,7 @@ class ShopperProfile:
     impulse_probability: float
     familiarity: float
     exploration_rate: float
+    # Minutes a shopper is willing to spend before abandoning a difficult trip.
     patience: int
     discount_awareness: float
     exposure_radius: int
@@ -71,10 +72,11 @@ SHOPPER_PROFILES = {
 class CustomerAgent(Agent):
     """Shopper agent with planned-list and impulse-purchase behavior."""
 
-    PATIENCE_TIME_COST = 0.65
+    PATIENCE_TIME_COST_MULTIPLIER = 0.65
     PATIENCE_TRAFFIC_COST_PER_SHOPPER = 0.10
     MAX_TRAFFIC_PATIENCE_COST = 0.80
-    PATIENCE_CONGESTION_DELAY_COST = 0.75
+    PATIENCE_CONGESTION_DELAY_MULTIPLIER = 0.75
+    CHECKOUT_PATIENCE_FRACTION = 0.45
 
     def __init__(
         self,
@@ -97,6 +99,7 @@ class CustomerAgent(Agent):
         self.abandoned_items: List[str] = []
         self.max_patience = float(self.profile.patience)
         self.patience_level = self.max_patience
+        self.checkout_patience_level = max(8.0, self.max_patience * self.CHECKOUT_PATIENCE_FRACTION)
         self.patience_lost_to_congestion = 0.0
         self.abandoned = False
         self.abandonment_time: Optional[int] = None
@@ -107,6 +110,7 @@ class CustomerAgent(Agent):
         self.planned_purchases: List[str] = []
         self.impulse_purchases: List[str] = []
         self.unlisted_purchases: List[str] = []
+        self.basket_records: List[tuple[StoreItem, bool, bool]] = []
         self.basket_value = 0.0
         self.basket_profit = 0.0
         self.abandoned_value = 0.0
@@ -118,9 +122,11 @@ class CustomerAgent(Agent):
         self.time_spent = 0
         self.checkout_wait = 0
         self.checkout_wait_initial = 0
+        self.checkout_wait_initial_minutes = 0.0
         self.checkout_time_spent = 0
         self.completed = False
         self.completion_time: Optional[int] = None
+        self.completion_minutes: Optional[float] = None
         self.exposure_count = 0
         self.congestion_delay = 0
         self.path_history = []
@@ -145,7 +151,8 @@ class CustomerAgent(Agent):
             return
 
         self.time_spent += 1
-        if self._reduce_patience(self.PATIENCE_TIME_COST, "time"):
+        time_cost = self.model.minutes_per_step * self.PATIENCE_TIME_COST_MULTIPLIER
+        if self._reduce_patience(time_cost, "time"):
             return
 
         self._interact_with_visible_items()
@@ -168,7 +175,17 @@ class CustomerAgent(Agent):
             self._enter_checkout()
 
     def _reduce_patience(self, amount: float, reason: str) -> bool:
-        if self.state != "shopping" or not self.remaining_items or amount <= 0:
+        if self.completed or amount <= 0:
+            return False
+
+        if self.state == "checkout":
+            self.checkout_patience_level = max(0.0, self.checkout_patience_level - amount)
+            if self.checkout_patience_level <= 0:
+                self._abandon_shopping("checkout")
+                return True
+            return False
+
+        if self.state != "shopping" or not self.remaining_items:
             return False
 
         self.patience_level = max(0.0, self.patience_level - amount)
@@ -189,7 +206,10 @@ class CustomerAgent(Agent):
         self.state = "abandoned"
         self.abandonment_time = self.time_spent
         self.abandonment_reason = reason
-        self.abandoned_items.extend(self.remaining_items)
+        abandoned_names = list(dict.fromkeys(
+            list(self.remaining_items) + [item.name for item, _, _ in self.basket_records]
+        ))
+        self.abandoned_items.extend(abandoned_names)
         self.abandoned_value = sum(
             self.model.layout.items_by_name[name].sale_price
             for name in self.abandoned_items
@@ -243,7 +263,10 @@ class CustomerAgent(Agent):
         delay_probability = min(0.55, local_crowd * 0.075)
         if self.model.random.random() < delay_probability:
             self.congestion_delay += 1
-            if self._reduce_patience(self.PATIENCE_CONGESTION_DELAY_COST, "congestion"):
+            congestion_cost = (
+                self.model.minutes_per_step * self.PATIENCE_CONGESTION_DELAY_MULTIPLIER
+            )
+            if self._reduce_patience(congestion_cost, "congestion"):
                 return True
             return False
 
@@ -304,7 +327,7 @@ class CustomerAgent(Agent):
         self.basket_value += item.sale_price
         self.basket_profit += item.profit
         on_shopping_list = item.name in self.shopping_list_names
-        self.model.record_purchase(item, planned=planned, on_shopping_list=on_shopping_list)
+        self.basket_records.append((item, planned, on_shopping_list))
 
         if planned:
             self.planned_purchases.append(item.name)
@@ -320,6 +343,10 @@ class CustomerAgent(Agent):
         self.state = "checkout"
         self.checkout_wait = self.model.estimate_checkout_wait()
         self.checkout_wait_initial = self.checkout_wait
+        self.checkout_wait_initial_minutes = round(
+            self.checkout_wait * self.model.minutes_per_step,
+            2,
+        )
         for item in self.model.layout.checkout_items():
             if item.name not in self.bought_item_names and self._will_buy_impulse(item, 0):
                 self._buy_item(item, planned=False)
@@ -328,9 +355,16 @@ class CustomerAgent(Agent):
         self.checkout_time_spent += 1
         self.checkout_wait -= 1
         if self.checkout_wait <= 0:
+            for item, planned, on_shopping_list in self.basket_records:
+                self.model.record_purchase(
+                    item,
+                    planned=planned,
+                    on_shopping_list=on_shopping_list,
+                )
             self.completed = True
             self.state = "finished"
             self.completion_time = self.time_spent
+            self.completion_minutes = round(self.time_spent * self.model.minutes_per_step, 2)
 
     @property
     def planned_completion_rate(self) -> float:
@@ -344,5 +378,8 @@ class CustomerAgent(Agent):
             return 0.0
         if self.completion_time is None:
             return 0.0
-        overtime = max(0, self.completion_time - self.max_patience)
+        completion_minutes = self.completion_minutes or (
+            self.completion_time * self.model.minutes_per_step
+        )
+        overtime = max(0.0, completion_minutes - self.max_patience)
         return max(0.0, 1.0 - overtime / max(1.0, self.max_patience))

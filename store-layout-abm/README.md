@@ -7,8 +7,26 @@ Mesa-based agent simulation for the grocery-store layout project described in th
 - Shopper profiles: mission-driven shoppers, bargain hunters, impulse buyers, loyal shoppers, and browsers.
 - Store layouts: efficiency-focused grid, exposure-focused loop, and exploration-focused free-flow.
 - Static products: item location, category, price, margin, visibility, promotion status, shopping-list appearance percentage, and whether the item is essential.
-- Dynamic processes: staggered shopper arrivals, unique shopper lists, movement, item search, product exposure, live patience levels, early abandonment, planned purchases, impulse purchases, unlisted purchases, congestion delays, and checkout waiting.
+- Dynamic processes: time-of-day shopper traffic, unique shopper lists, movement, item search, product exposure, live patience levels, early abandonment, planned purchases, impulse purchases, unlisted purchases, congestion delays, and checkout waiting.
 - Output metrics: completion time, shopping-list completion, abandonment rate and reason, satisfaction, checkout queues, basket value, category profit, shopper-type behavior, layout score, traffic heatmaps, planned purchases, impulse purchases, unlisted purchases, profit from unlisted purchases, abandoned-list items, lost sales from abandonment, revenue, and profit.
+
+The default store catalogue now includes 69 products across produce, bakery, dairy, meat, pantry, beverages, snacks, frozen, household, personal care, and checkout impulse categories so the live map looks more like a stocked grocery store.
+
+## Time-Of-Day Traffic
+
+By default, each simulation day represents a store open from 9:00 AM to 9:00 PM. The `--shoppers` value is the total daily shopper population, and each time window sets the target share of shoppers allowed to be active in the store:
+
+- 9:00 AM-10:00 AM: 5%
+- 10:00 AM-11:00 AM: 35%
+- 11:00 AM-3:00 PM: 15%
+- 3:00 PM-5:00 PM: 35%
+- 5:00 PM-9:00 PM: 10%
+
+The default command-line and live-dashboard population is 400 shoppers so the compact grid stays responsive. A full-size supermarket benchmark is closer to 2,225 in-store transactions per day, derived from FMI's 2024 average weekly supermarket sales and in-store sales per transaction. You can enter any positive whole number in the live dashboard's daily shopper population field, or pass any positive value to `--shoppers` on the command line.
+
+The live dashboard and timeseries CSV include store time, traffic period, target traffic share, active shoppers, and target active shoppers. If a peak ends while shoppers are still inside, those shoppers continue naturally and new admissions pause until active shoppers fall below the current target.
+
+Patience is tracked in approximate minutes. Purchases are counted as revenue only after checkout completes; if shoppers abandon before payment, the basket is counted as lost revenue/profit instead.
 
 ## Setup
 
@@ -26,20 +44,26 @@ If you already installed Mesa in another Python environment, activate that envir
 ## Run One Simulation
 
 ```powershell
-python main.py --layout grid --shoppers 40 --steps 250 --seed 42
+python main.py --layout grid --shoppers 400 --steps 720 --seed 42
+```
+
+To change the opening hours, use 24-hour clock values:
+
+```powershell
+python main.py --layout grid --shoppers 400 --steps 720 --opening-hour 9 --closing-hour 21
 ```
 
 To simulate multiple days with the same settings, set `--days`. Each day is a fresh simulation run with a new seed based on the starting seed:
 
 ```powershell
-python main.py --layout grid --shoppers 40 --steps 250 --seed 42 --days 7
+python main.py --layout grid --shoppers 400 --steps 720 --seed 42 --days 7
 ```
 
 Other layout choices:
 
 ```powershell
-python main.py --layout loop --shoppers 40 --steps 250 --seed 42
-python main.py --layout free_flow --shoppers 40 --steps 250 --seed 42
+python main.py --layout loop --shoppers 400 --steps 720 --seed 42
+python main.py --layout free_flow --shoppers 400 --steps 720 --seed 42
 ```
 
 Generated CSV and PNG files are saved in `results/`.

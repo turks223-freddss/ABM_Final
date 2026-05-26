@@ -18,8 +18,18 @@ def build_parser() -> argparse.ArgumentParser:
         description="Mesa ABM for grocery store layout, shopper movement, and profit."
     )
     parser.add_argument("--layout", choices=LAYOUT_NAMES, default="grid")
-    parser.add_argument("--shoppers", type=int, default=40)
-    parser.add_argument("--steps", type=int, default=250)
+    parser.add_argument(
+        "--shoppers",
+        type=int,
+        default=400,
+        help="Total daily shopper population for the simulated store day.",
+    )
+    parser.add_argument(
+        "--steps",
+        type=int,
+        default=720,
+        help="Simulation steps across the store day. Default: 720, roughly one step per minute for 9 AM-9 PM.",
+    )
     parser.add_argument(
         "--days",
         type=int,
@@ -28,6 +38,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--promotion-level", type=float, default=0.25)
+    parser.add_argument(
+        "--opening-hour",
+        type=float,
+        default=9.0,
+        help="Store opening hour on a 24-hour clock. Default: 9.0.",
+    )
+    parser.add_argument(
+        "--closing-hour",
+        type=float,
+        default=21.0,
+        help="Store closing hour on a 24-hour clock. Default: 21.0.",
+    )
     parser.add_argument("--results-dir", default="results")
     parser.add_argument("--no-plots", action="store_true", help="Skip PNG chart generation.")
 
@@ -62,6 +84,8 @@ def main() -> None:
         parser.error("--days must be positive.")
     if args.runs is not None and args.runs <= 0:
         parser.error("--runs must be positive.")
+    if args.closing_hour <= args.opening_hour:
+        parser.error("--closing-hour must be after --opening-hour.")
 
     results_dir = Path(args.results_dir)
     make_plots = not args.no_plots
@@ -77,6 +101,8 @@ def main() -> None:
             output_dir=results_dir,
             make_plots=make_plots,
             seed=args.seed,
+            opening_hour=args.opening_hour,
+            closing_hour=args.closing_hour,
         )
         aggregate = aggregate_results(results)
         print("\nExperiment complete. Average metrics by layout and shopper count:\n")
@@ -93,6 +119,8 @@ def main() -> None:
         output_dir=results_dir,
         make_plots=make_plots,
         days=args.days,
+        opening_hour=args.opening_hour,
+        closing_hour=args.closing_hour,
     )
     printable = {key: value for key, value in summary.items() if not key.endswith("_file")}
     if args.days == 1:

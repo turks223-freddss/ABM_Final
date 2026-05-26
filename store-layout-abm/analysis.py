@@ -19,6 +19,8 @@ def run_single_simulation(
     output_dir: str | Path = "results",
     make_plots: bool = True,
     days: int = 1,
+    opening_hour: float = 9.0,
+    closing_hour: float = 21.0,
 ) -> dict:
     if days <= 0:
         raise ValueError("days must be positive.")
@@ -36,6 +38,8 @@ def run_single_simulation(
             output_dir=output_path,
             make_plots=make_plots,
             days=days,
+            opening_hour=opening_hour,
+            closing_hour=closing_hour,
         )
 
     model = StoreModel(
@@ -43,6 +47,8 @@ def run_single_simulation(
         num_shoppers=shoppers,
         max_steps=steps,
         promotion_level=promotion_level,
+        opening_hour=opening_hour,
+        closing_hour=closing_hour,
         seed=seed,
     )
     model.run_model()
@@ -112,6 +118,8 @@ def run_multi_day_simulation(
     output_dir: str | Path,
     make_plots: bool,
     days: int,
+    opening_hour: float = 9.0,
+    closing_hour: float = 21.0,
 ) -> dict:
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -131,6 +139,8 @@ def run_multi_day_simulation(
             num_shoppers=shoppers,
             max_steps=steps,
             promotion_level=promotion_level,
+            opening_hour=opening_hour,
+            closing_hour=closing_hour,
             seed=day_seed,
         )
         model.run_model()
@@ -279,6 +289,8 @@ def run_experiment(
     output_dir: str | Path = "results",
     make_plots: bool = True,
     seed: int | None = 42,
+    opening_hour: float = 9.0,
+    closing_hour: float = 21.0,
 ) -> pd.DataFrame:
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -295,6 +307,8 @@ def run_experiment(
                     num_shoppers=shoppers,
                     max_steps=steps,
                     promotion_level=promotion_level,
+                    opening_hour=opening_hour,
+                    closing_hour=closing_hour,
                     seed=run_seed,
                 )
                 model.run_model()
@@ -371,6 +385,8 @@ def aggregate_results(results: pd.DataFrame) -> pd.DataFrame:
     numeric_columns = [
         "arrived_shoppers",
         "waiting_shoppers",
+        "target_active_shoppers",
+        "active_shopper_share",
         "completion_rate",
         "abandonment_rate",
         "abandoned_due_to_time",
@@ -378,6 +394,7 @@ def aggregate_results(results: pd.DataFrame) -> pd.DataFrame:
         "abandoned_due_to_congestion",
         "abandoned_due_to_checkout",
         "avg_completion_time",
+        "avg_completion_minutes",
         "avg_planned_completion",
         "avg_satisfaction",
         "avg_checkout_wait",
@@ -476,6 +493,7 @@ def plot_behavior_timeseries(model_df: pd.DataFrame, path: Path) -> None:
 
     columns = [
         "active_shoppers",
+        "target_active_shoppers",
         "abandoned_shoppers",
         "checkout_queue",
         "avg_patience_remaining",
@@ -492,6 +510,14 @@ def plot_behavior_timeseries(model_df: pd.DataFrame, path: Path) -> None:
     fig, ax1 = plt.subplots(figsize=(9, 5))
     if "active_shoppers" in plot_df:
         ax1.plot(plot_df["step"], plot_df["active_shoppers"], label="Active", color="#2563eb")
+    if "target_active_shoppers" in plot_df:
+        ax1.plot(
+            plot_df["step"],
+            plot_df["target_active_shoppers"],
+            label="Target active",
+            color="#ec4899",
+            linestyle="--",
+        )
     if "abandoned_shoppers" in plot_df:
         ax1.plot(plot_df["step"], plot_df["abandoned_shoppers"], label="Abandoned", color="#dc2626")
     if "checkout_queue" in plot_df:
