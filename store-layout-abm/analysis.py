@@ -16,6 +16,7 @@ def run_single_simulation(
     steps: int,
     seed: int | None,
     promotion_level: float,
+    num_cashiers: int = 3,
     output_dir: str | Path = "results",
     make_plots: bool = True,
     days: int = 1,
@@ -35,6 +36,7 @@ def run_single_simulation(
             steps=steps,
             seed=seed,
             promotion_level=promotion_level,
+            num_cashiers=num_cashiers,
             output_dir=output_path,
             make_plots=make_plots,
             days=days,
@@ -45,6 +47,7 @@ def run_single_simulation(
     model = StoreModel(
         layout_name=layout,
         num_shoppers=shoppers,
+        num_cashiers=num_cashiers,
         max_steps=steps,
         promotion_level=promotion_level,
         opening_hour=opening_hour,
@@ -57,47 +60,48 @@ def run_single_simulation(
     summary["days_simulated"] = days
     summary["seed"] = seed
     summary_df = pd.DataFrame([summary])
-    summary_file = output_path / f"summary_{layout}_{shoppers}_seed{seed}.csv"
+    file_stem = f"{layout}_{shoppers}_{num_cashiers}cashiers_seed{seed}"
+    summary_file = output_path / f"summary_{file_stem}.csv"
     summary_df.to_csv(summary_file, index=False)
 
     model_df = model.datacollector.get_model_vars_dataframe()
-    model_file = output_path / f"timeseries_{layout}_{shoppers}_seed{seed}.csv"
+    model_file = output_path / f"timeseries_{file_stem}.csv"
     model_df.to_csv(model_file, index=False)
 
     shopper_lists_df = pd.DataFrame(model.shopper_list_summary())
-    shopper_lists_file = output_path / f"shopping_lists_{layout}_{shoppers}_seed{seed}.csv"
+    shopper_lists_file = output_path / f"shopping_lists_{file_stem}.csv"
     shopper_lists_df.to_csv(shopper_lists_file, index=False)
 
     item_rates_df = pd.DataFrame(model.shopping_list_item_summary())
-    item_rates_file = output_path / f"shopping_list_items_{layout}_{shoppers}_seed{seed}.csv"
+    item_rates_file = output_path / f"shopping_list_items_{file_stem}.csv"
     item_rates_df.to_csv(item_rates_file, index=False)
 
     category_df = pd.DataFrame(model.category_summary())
-    category_file = output_path / f"category_sales_{layout}_{shoppers}_seed{seed}.csv"
+    category_file = output_path / f"category_sales_{file_stem}.csv"
     category_df.to_csv(category_file, index=False)
 
     shopper_type_df = pd.DataFrame(model.shopper_type_summary())
-    shopper_type_file = output_path / f"shopper_types_{layout}_{shoppers}_seed{seed}.csv"
+    shopper_type_file = output_path / f"shopper_types_{file_stem}.csv"
     shopper_type_df.to_csv(shopper_type_file, index=False)
 
     if make_plots:
-        plot_timeseries(model_df, output_path / f"timeseries_{layout}_{shoppers}_seed{seed}.png")
-        plot_heatmap(model, output_path / f"heatmap_{layout}_{shoppers}_seed{seed}.png")
+        plot_timeseries(model_df, output_path / f"timeseries_{file_stem}.png")
+        plot_heatmap(model, output_path / f"heatmap_{file_stem}.png")
         plot_behavior_timeseries(
             model_df,
-            output_path / f"behavior_{layout}_{shoppers}_seed{seed}.png",
+            output_path / f"behavior_{file_stem}.png",
         )
         plot_purchase_mix(
             summary,
-            output_path / f"purchase_mix_{layout}_{shoppers}_seed{seed}.png",
+            output_path / f"purchase_mix_{file_stem}.png",
         )
         plot_category_performance(
             category_df,
-            output_path / f"category_performance_{layout}_{shoppers}_seed{seed}.png",
+            output_path / f"category_performance_{file_stem}.png",
         )
         plot_shopper_type_performance(
             shopper_type_df,
-            output_path / f"shopper_type_performance_{layout}_{shoppers}_seed{seed}.png",
+            output_path / f"shopper_type_performance_{file_stem}.png",
         )
 
     summary["summary_file"] = str(summary_file)
@@ -115,6 +119,7 @@ def run_multi_day_simulation(
     steps: int,
     seed: int | None,
     promotion_level: float,
+    num_cashiers: int,
     output_dir: str | Path,
     make_plots: bool,
     days: int,
@@ -137,6 +142,7 @@ def run_multi_day_simulation(
         model = StoreModel(
             layout_name=layout,
             num_shoppers=shoppers,
+            num_cashiers=num_cashiers,
             max_steps=steps,
             promotion_level=promotion_level,
             opening_hour=opening_hour,
@@ -177,7 +183,7 @@ def run_multi_day_simulation(
         shopper_type_frames.append(shopper_type_df)
         heatmaps.append(model.traffic_heatmap())
 
-    file_stem = f"{layout}_{shoppers}_{days}days_seed{seed}"
+    file_stem = f"{layout}_{shoppers}_{days}days_{num_cashiers}cashiers_seed{seed}"
     daily_summary_df = pd.DataFrame(daily_records)
     daily_summary_file = output_path / f"daily_summary_{file_stem}.csv"
     daily_summary_df.to_csv(daily_summary_file, index=False)
@@ -219,8 +225,8 @@ def run_multi_day_simulation(
             average_heatmap,
             output_path / f"heatmap_{file_stem}.png",
             title=f"Average traffic heatmap: {layout} over {days} days",
-            entrance=reference_model.layout.entrance,
-            checkout=reference_model.layout.checkout,
+            entrance=reference_model.layout.entrance_positions,
+            checkout=reference_model.layout.checkout_positions,
         )
         plot_behavior_timeseries(timeseries_df, output_path / f"behavior_{file_stem}.png")
         plot_purchase_mix(summary, output_path / f"purchase_mix_{file_stem}.png")
@@ -286,6 +292,7 @@ def run_experiment(
     runs: int = 5,
     steps: int = 250,
     promotion_level: float = 0.25,
+    num_cashiers: int = 3,
     output_dir: str | Path = "results",
     make_plots: bool = True,
     seed: int | None = 42,
@@ -305,6 +312,7 @@ def run_experiment(
                 model = StoreModel(
                     layout_name=layout,
                     num_shoppers=shoppers,
+                    num_cashiers=num_cashiers,
                     max_steps=steps,
                     promotion_level=promotion_level,
                     opening_hour=opening_hour,
@@ -656,8 +664,8 @@ def plot_heatmap(model: StoreModel, path: Path) -> None:
         model.traffic_heatmap(),
         path,
         title=f"Traffic heatmap: {model.layout_name}",
-        entrance=model.layout.entrance,
-        checkout=model.layout.checkout,
+        entrance=model.layout.entrance_positions,
+        checkout=model.layout.checkout_positions,
     )
 
 
@@ -667,8 +675,24 @@ def plot_heatmap_data(heatmap, path: Path, title: str, entrance, checkout) -> No
 
     fig, ax = plt.subplots(figsize=(8, 5))
     image = ax.imshow(heatmap, origin="lower", cmap="YlOrRd")
-    ax.scatter([entrance[0]], [entrance[1]], c="white", s=80, label="Entrance")
-    ax.scatter([checkout[0]], [checkout[1]], c="black", s=80, label="Checkout")
+    entrance_positions = _as_position_list(entrance)
+    checkout_positions = _as_position_list(checkout)
+    if entrance_positions:
+        ax.scatter(
+            [pos[0] for pos in entrance_positions],
+            [pos[1] for pos in entrance_positions],
+            c="white",
+            s=80,
+            label="Entrance",
+        )
+    if checkout_positions:
+        ax.scatter(
+            [pos[0] for pos in checkout_positions],
+            [pos[1] for pos in checkout_positions],
+            c="black",
+            s=80,
+            label="Checkout",
+        )
     ax.set_title(title)
     ax.set_xlabel("x")
     ax.set_ylabel("y")
@@ -677,6 +701,14 @@ def plot_heatmap_data(heatmap, path: Path, title: str, entrance, checkout) -> No
     fig.tight_layout()
     fig.savefig(path, dpi=150)
     plt.close(fig)
+
+
+def _as_position_list(value) -> list[tuple[int, int]]:
+    if not value:
+        return []
+    if isinstance(value, tuple) and len(value) == 2 and isinstance(value[0], int):
+        return [value]
+    return list(value)
 
 
 def plot_layout_comparison(aggregate: pd.DataFrame, path: Path) -> None:

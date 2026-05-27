@@ -25,6 +25,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Total daily shopper population for the simulated store day.",
     )
     parser.add_argument(
+        "--cashiers",
+        type=int,
+        default=3,
+        help="Number of cashier lanes at the entrance/checkout area.",
+    )
+    parser.add_argument(
         "--steps",
         type=int,
         default=720,
@@ -82,6 +88,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.days <= 0:
         parser.error("--days must be positive.")
+    if args.cashiers <= 0:
+        parser.error("--cashiers must be positive.")
     if args.runs is not None and args.runs <= 0:
         parser.error("--runs must be positive.")
     if args.closing_hour <= args.opening_hour:
@@ -98,6 +106,7 @@ def main() -> None:
             runs=experiment_runs,
             steps=args.steps,
             promotion_level=args.promotion_level,
+            num_cashiers=args.cashiers,
             output_dir=results_dir,
             make_plots=make_plots,
             seed=args.seed,
@@ -116,6 +125,7 @@ def main() -> None:
         steps=args.steps,
         seed=args.seed,
         promotion_level=args.promotion_level,
+        num_cashiers=args.cashiers,
         output_dir=results_dir,
         make_plots=make_plots,
         days=args.days,

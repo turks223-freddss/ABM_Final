@@ -6,11 +6,17 @@ Mesa-based agent simulation for the grocery-store layout project described in th
 
 - Shopper profiles: mission-driven shoppers, bargain hunters, impulse buyers, loyal shoppers, and browsers.
 - Store layouts: efficiency-focused grid, exposure-focused loop, and exploration-focused free-flow.
-- Static products: item location, category, price, margin, visibility, promotion status, shopping-list appearance percentage, and whether the item is essential.
-- Dynamic processes: time-of-day shopper traffic, unique shopper lists, movement, item search, product exposure, live patience levels, early abandonment, planned purchases, impulse purchases, unlisted purchases, congestion delays, and checkout waiting.
+- Static products: shelf location, category, price, margin, visibility, promotion status, shopping-list appearance percentage, and whether the item is essential.
+- Dynamic processes: time-of-day shopper traffic, unique shopper lists, aisle movement, item search, product exposure, live patience levels, tile crowding, early abandonment, planned purchases, impulse purchases, unlisted purchases, congestion delays, and checkout waiting.
 - Output metrics: completion time, shopping-list completion, abandonment rate and reason, satisfaction, checkout queues, basket value, category profit, shopper-type behavior, layout score, traffic heatmaps, planned purchases, impulse purchases, unlisted purchases, profit from unlisted purchases, abandoned-list items, lost sales from abandonment, revenue, and profit.
 
-The default store catalogue now includes 69 products across produce, bakery, dairy, meat, pantry, beverages, snacks, frozen, household, personal care, and checkout impulse categories so the live map looks more like a stocked grocery store.
+The default store catalogue is shelf-driven. Each shelf coordinate creates one product, so adding more shelf cells automatically increases the number of products instead of leaving capped or empty shelves. Product templates repeat with numbered names when a category has more shelf cells than unique product templates.
+
+Shelves are modeled separately from walkable aisle tiles. The live map colors shelf blocks by product category, while shoppers move only through aisle/service tiles. The default model grid is now 24x24. Shelf placement is intentionally defined with editable coordinate arrays in `store_layout.py`, for example `produce: [(2, 13), (3, 13), ...]`.
+
+Product placement also uses those category coordinate arrays. Edit the arrays in `store_layout.py` to move shelves around by hand, for example `produce: [(2, 13), (3, 13), ...]`; the product count will follow the number of shelf cells present.
+
+Each cashier has three dedicated queue tiles directly before the register. These queue tiles are marked `Q` in the live map and are reserved for shoppers who have completed their shopping list and are moving to checkout. Cashiers are separated by checkout impulse shelves stocked with small items such as gum, mints, chocolate, magazines, and batteries.
 
 ## Time-Of-Day Traffic
 
@@ -26,7 +32,11 @@ The default command-line and live-dashboard population is 400 shoppers so the co
 
 The live dashboard and timeseries CSV include store time, traffic period, target traffic share, active shoppers, and target active shoppers. If a peak ends while shoppers are still inside, those shoppers continue naturally and new admissions pause until active shoppers fall below the current target.
 
+In the live dashboard, hover over shopper, product, cashier, and queue tiles for quick details. Click a shopper to track their basket, shopping list, patience, state, and movement stats. Click a product shelf to inspect item details, or click a cashier/queue lane to inspect queue length and randomized cashier checkout speed.
+
 Patience is tracked in approximate minutes. Purchases are counted as revenue only after checkout completes; if shoppers abandon before payment, the basket is counted as lost revenue/profit instead.
+
+Two shoppers can share a tile without penalty. When three or four shoppers occupy the same tile, they lose patience from crowding. A tile will not accept a fifth shopper, so blocked shoppers wait, lose patience, and add to the tile-capacity metrics.
 
 ## Setup
 
@@ -45,6 +55,12 @@ If you already installed Mesa in another Python environment, activate that envir
 
 ```powershell
 python main.py --layout grid --shoppers 400 --steps 720 --seed 42
+```
+
+To change the number of cashier lanes:
+
+```powershell
+python main.py --layout grid --shoppers 400 --cashiers 4 --steps 720 --seed 42
 ```
 
 To change the opening hours, use 24-hour clock values:
@@ -98,7 +114,7 @@ Then open the local URL printed in the terminal, usually:
 http://localhost:8765
 ```
 
-Use the sidebar to change the layout, shopper count, promotion level, seed, and speed. Click `Reset` after changing model parameters, then click Play.
+Use the sidebar to change the layout, shopper count, cashier count, promotion level, seed, and speed. Click `Reset` after changing model parameters, then click Play.
 
 On Windows you can also run:
 

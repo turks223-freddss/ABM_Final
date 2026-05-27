@@ -11,7 +11,7 @@ from mesa.datacollection import DataCollector
 from mesa.space import MultiGrid
 
 from customer_agent import CustomerAgent, SHOPPER_PROFILES
-from store_layout import LAYOUT_NAMES, StoreItem, StoreLayout
+from store_layout import LAYOUT_NAMES, Position, StoreItem, StoreLayout, manhattan
 
 
 DEFAULT_SHOPPER_MIX = {
@@ -44,12 +44,16 @@ class TrafficPeriod:
 class StoreModel(Model):
     """Mesa model for grocery layout, shopper movement, and store profit."""
 
+    TILE_COMFORT_CAPACITY = 2
+    TILE_MAX_CAPACITY = 4
+
     def __init__(
         self,
         layout_name: str = "grid",
         width: int = 24,
-        height: int = 16,
+        height: int = 24,
         num_shoppers: int | str = DEFAULT_DAILY_SHOPPERS,
+        num_cashiers: int | str = 3,
         max_steps: int = 720,
         promotion_level: float = 0.25,
         shopper_mix: Optional[Dict[str, float]] = None,
@@ -63,6 +67,7 @@ class StoreModel(Model):
         if layout_name not in LAYOUT_NAMES:
             raise ValueError(f"layout_name must be one of {LAYOUT_NAMES}.")
         num_shoppers = self._coerce_positive_int(num_shoppers, "num_shoppers")
+        num_cashiers = self._coerce_positive_int(num_cashiers, "num_cashiers")
         if max_steps <= 0:
             raise ValueError("max_steps must be positive.")
         if closing_hour <= opening_hour:
@@ -72,6 +77,7 @@ class StoreModel(Model):
         self.width = width
         self.height = height
         self.num_shoppers = num_shoppers
+        self.num_cashiers = max(1, min(num_cashiers, width - 4))
         self.max_steps = max_steps
         self.promotion_level = promotion_level
         self.opening_hour = float(opening_hour)
@@ -81,7 +87,18 @@ class StoreModel(Model):
         self.running = True
 
         self.grid = MultiGrid(width, height, torus=False)
-        self.layout = StoreLayout(layout_name, width, height, promotion_level, self.random)
+        self.layout = StoreLayout(
+            layout_name,
+            width,
+            height,
+            promotion_level,
+            self.random,
+            num_cashiers=self.num_cashiers,
+        )
+        self.cashier_service_minutes: Dict[Position, float] = {
+            checkout_pos: round(self.random.uniform(1.8, 4.2), 2)
+            for checkout_pos in self.layout.checkout_positions
+        }
         self.customers: List[CustomerAgent] = []
         self.arrival_window_steps = self._default_arrival_window()
         self.traffic_profile = self._normalize_traffic_profile(
@@ -109,6 +126,8 @@ class StoreModel(Model):
         self.total_checkout_wait = 0
         self.max_checkout_wait = 0
         self.longest_checkout_queue = 0
+        self.tile_capacity_blocks = 0
+        self.tile_crowding_patience_loss = 0.0
         self.item_metrics = {
             item.name: self._empty_sales_bucket(item.category)
             for item in self.layout.items
@@ -129,6 +148,8 @@ class StoreModel(Model):
                 "target_active_shoppers": lambda m: m.target_active_shopper_count,
                 "active_shopper_share": lambda m: round(m.active_shopper_share, 3),
                 "active_shoppers": lambda m: m.active_shopper_count,
+                "crowded_tiles": lambda m: m.crowded_tile_count,
+                "tile_capacity_blocks": lambda m: m.tile_capacity_blocks,
                 "arrived_shoppers": lambda m: m.arrived_shopper_count,
                 "waiting_shoppers": lambda m: m.waiting_shopper_count,
                 "finished_shoppers": lambda m: m.finished_shopper_count,
@@ -162,6 +183,10 @@ class StoreModel(Model):
                 "avg_patience_remaining": lambda m: round(m.avg_patience_remaining, 2),
                 "avg_patience_lost_to_congestion": lambda m: round(
                     m.avg_patience_lost_to_congestion,
+                    2,
+                ),
+                "tile_crowding_patience_loss": lambda m: round(
+                    m.tile_crowding_patience_loss,
                     2,
                 ),
                 "layout_score": lambda m: round(m.layout_score, 2),
@@ -366,8 +391,12 @@ class StoreModel(Model):
             if not customer.arrived and customer.arrival_time <= self.step_count
         ]
         self.random.shuffle(eligible_customers)
-        for customer in eligible_customers[:available_slots]:
-            customer.enter_store()
+        entered = 0
+        for customer in eligible_customers:
+            if entered >= available_slots:
+                break
+            if customer.enter_store():
+                entered += 1
 
     def _weighted_choice(self, options: List[str], weights: List[float]) -> str:
         threshold = self.random.random() * sum(weights)
@@ -593,22 +622,91 @@ class StoreModel(Model):
             self._record_item_metric(item, "lost_revenue", item.sale_price)
             self._record_item_metric(item, "lost_profit", item.profit)
 
-    def estimate_checkout_wait(self) -> int:
+    def estimate_checkout_wait(self, checkout_pos: Optional[Position] = None) -> int:
+        checkout_pos = checkout_pos or self.layout.checkout
         queue_pressure = sum(
             1
             for customer in self.customers
             if not customer.completed
             and customer.state == "checkout"
-            and customer.pos == self.layout.checkout
+            and customer.pos == checkout_pos
         )
         queue_length = queue_pressure + 1
-        wait_minutes = 3.0 + queue_pressure * 1.2 + self.random.random() * 3.0
+        service_minutes = self.cashier_service_minutes.get(checkout_pos, 3.0)
+        wait_minutes = (
+            service_minutes
+            + queue_pressure * service_minutes * 0.55
+            + self.random.random() * service_minutes * 0.35
+        )
         wait = max(1, round(wait_minutes / self.minutes_per_step))
         self.checkout_entry_count += 1
         self.total_checkout_wait += wait_minutes
         self.max_checkout_wait = max(self.max_checkout_wait, wait_minutes)
-        self.longest_checkout_queue = max(self.longest_checkout_queue, queue_length)
+        self.longest_checkout_queue = max(
+            self.longest_checkout_queue,
+            self.checkout_queue_length + 1,
+            queue_length,
+        )
         return wait
+
+    def choose_entrance_position(self) -> Position:
+        return min(
+            self.layout.entrance_positions,
+            key=lambda pos: (
+                self.count_customers_on_tile(pos),
+                manhattan(pos, self.layout.checkout),
+                self.random.random(),
+            ),
+        )
+
+    def cashier_service_label(self, checkout_pos: Position) -> str:
+        service_minutes = self.cashier_service_minutes.get(checkout_pos, 0.0)
+        if service_minutes <= 2.4:
+            return "fast"
+        if service_minutes <= 3.4:
+            return "average"
+        return "slow"
+
+    def cashier_detail(self, checkout_pos: Position) -> Dict[str, object]:
+        return {
+            "position": checkout_pos,
+            "service_minutes": self.cashier_service_minutes.get(checkout_pos, 0.0),
+            "speed": self.cashier_service_label(checkout_pos),
+            "queue_length": self.checkout_queue_length_at(checkout_pos),
+            "queue_cells": self.layout.checkout_queue_cells.get(checkout_pos, []),
+        }
+
+    def choose_checkout_position(self, pos: Position) -> Position:
+        return min(
+            self.layout.checkout_positions,
+            key=lambda checkout_pos: (
+                self.count_customers_on_tile(checkout_pos) >= self.TILE_MAX_CAPACITY,
+                self.checkout_queue_length_at(checkout_pos),
+                self.count_customers_on_tile(checkout_pos),
+                manhattan(pos, self.checkout_entry_cell(checkout_pos)),
+                self.random.random(),
+            ),
+        )
+
+    def checkout_entry_cell(self, checkout_pos: Position) -> Position:
+        lane = self.layout.checkout_queue_cells.get(checkout_pos, [])
+        return lane[-1] if lane else checkout_pos
+
+    def checkout_target_for(self, customer: CustomerAgent) -> Position:
+        if (
+            customer.checkout_position is None
+            or customer.checkout_position not in self.layout.checkout_positions
+        ):
+            customer.checkout_position = self.choose_checkout_position(customer.pos)
+
+        checkout_pos = customer.checkout_position
+        lane = self.layout.checkout_queue_cells.get(checkout_pos, [])
+        if customer.pos == checkout_pos:
+            return checkout_pos
+        if customer.pos in lane:
+            lane_index = lane.index(customer.pos)
+            return checkout_pos if lane_index == 0 else lane[lane_index - 1]
+        return self.checkout_entry_cell(checkout_pos)
 
     def count_customers_near(self, pos, radius: int = 1, include_self: bool = True) -> int:
         nearby_agents = self.grid.get_neighbors(
@@ -621,6 +719,77 @@ class StoreModel(Model):
             1
             for agent in nearby_agents
             if isinstance(agent, CustomerAgent) and not agent.completed
+        )
+
+    def count_customers_on_tile(
+        self,
+        pos: Position,
+        exclude_customer: Optional[CustomerAgent] = None,
+    ) -> int:
+        return sum(
+            1
+            for agent in self.grid.get_cell_list_contents([pos])
+            if isinstance(agent, CustomerAgent)
+            and not agent.completed
+            and agent is not exclude_customer
+        )
+
+    def can_enter_tile(
+        self,
+        pos: Position,
+        mover: Optional[CustomerAgent] = None,
+    ) -> bool:
+        if pos not in self.layout.passable:
+            return False
+        queue_checkout = self.layout.checkout_for_queue_cell(pos)
+        if queue_checkout is not None:
+            if mover is None or mover.remaining_items:
+                return False
+            if mover.checkout_position not in (None, queue_checkout):
+                return False
+        if self.layout.is_checkout(pos):
+            if mover is None or mover.remaining_items:
+                return False
+            if mover.checkout_position not in (None, pos):
+                return False
+        return (
+            self.count_customers_on_tile(pos, exclude_customer=mover)
+            < self.TILE_MAX_CAPACITY
+        )
+
+    def checkout_queue_length_at(self, checkout_pos: Position) -> int:
+        lane = set(self.layout.checkout_queue_cells.get(checkout_pos, []))
+        return sum(
+            1
+            for customer in self.customers
+            if customer.arrived
+            and not customer.completed
+            and (
+                (customer.state == "checkout" and customer.pos == checkout_pos)
+                or (
+                    customer.checkout_position == checkout_pos
+                    and customer.pos in lane
+                )
+            )
+        )
+
+    def record_tile_capacity_block(self) -> None:
+        self.tile_capacity_blocks += 1
+
+    def record_tile_crowding_patience_loss(self, amount: float) -> None:
+        self.tile_crowding_patience_loss += amount
+
+    @property
+    def crowded_tile_count(self) -> int:
+        occupied_positions = {
+            customer.pos
+            for customer in self.customers
+            if customer.arrived and not customer.completed
+        }
+        return sum(
+            1
+            for pos in occupied_positions
+            if self.count_customers_on_tile(pos) > self.TILE_COMFORT_CAPACITY
         )
 
     @property
@@ -733,8 +902,10 @@ class StoreModel(Model):
             for customer in self.customers
             if customer.arrived
             and not customer.completed
-            and customer.state == "checkout"
-            and customer.pos == self.layout.checkout
+            and (
+                (customer.state == "checkout" and self.layout.is_checkout(customer.pos))
+                or customer.pos in self.layout.all_checkout_queue_cells
+            )
         )
 
     @property
@@ -806,6 +977,15 @@ class StoreModel(Model):
         return {
             "layout": self.layout_name,
             "shoppers": self.num_shoppers,
+            "cashiers": self.num_cashiers,
+            "avg_cashier_service_minutes": round(
+                mean(self.cashier_service_minutes.values()),
+                2,
+            )
+            if self.cashier_service_minutes
+            else 0.0,
+            "comfortable_tile_capacity": self.TILE_COMFORT_CAPACITY,
+            "max_tile_capacity": self.TILE_MAX_CAPACITY,
             "opening_time": self._format_hour(self.opening_hour),
             "closing_time": self._format_hour(self.closing_hour),
             "current_store_time": self.current_time_label,
@@ -821,6 +1001,8 @@ class StoreModel(Model):
             "waiting_shoppers": self.waiting_shopper_count,
             "finished_shoppers": self.finished_shopper_count,
             "abandoned_shoppers": self.abandoned_shopper_count,
+            "crowded_tiles": self.crowded_tile_count,
+            "tile_capacity_blocks": self.tile_capacity_blocks,
             "completion_rate": round(completion_rate, 3),
             "abandonment_rate": round(abandonment_rate, 3),
             "abandoned_due_to_time": self.abandonment_reason_counts.get("time", 0),
@@ -859,6 +1041,7 @@ class StoreModel(Model):
                 self.avg_patience_lost_to_congestion,
                 2,
             ),
+            "tile_crowding_patience_loss": round(self.tile_crowding_patience_loss, 2),
             "layout_score": round(self.layout_score, 2),
         }
 

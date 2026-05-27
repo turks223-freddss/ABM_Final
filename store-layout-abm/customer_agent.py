@@ -76,6 +76,8 @@ class CustomerAgent(Agent):
     PATIENCE_TRAFFIC_COST_PER_SHOPPER = 0.10
     MAX_TRAFFIC_PATIENCE_COST = 0.80
     PATIENCE_CONGESTION_DELAY_MULTIPLIER = 0.75
+    SAME_TILE_CROWDING_COST_PER_SHOPPER = 0.42
+    BLOCKED_TILE_PATIENCE_MULTIPLIER = 0.90
     CHECKOUT_PATIENCE_FRACTION = 0.45
 
     def __init__(
@@ -124,6 +126,7 @@ class CustomerAgent(Agent):
         self.checkout_wait_initial = 0
         self.checkout_wait_initial_minutes = 0.0
         self.checkout_time_spent = 0
+        self.checkout_position = None
         self.completed = False
         self.completion_time: Optional[int] = None
         self.completion_minutes: Optional[float] = None
@@ -137,14 +140,19 @@ class CustomerAgent(Agent):
         except TypeError:
             super().__init__(uid, model)
 
-    def enter_store(self) -> None:
+    def enter_store(self) -> bool:
         if self.arrived:
-            return
+            return True
+
+        entrance = self.model.choose_entrance_position()
+        if not self.model.can_enter_tile(entrance, mover=self):
+            return False
 
         self.arrived = True
         self.state = "shopping"
-        self.model.grid.place_agent(self, self.model.layout.entrance)
-        self.path_history.append(self.model.layout.entrance)
+        self.model.grid.place_agent(self, entrance)
+        self.path_history.append(entrance)
+        return True
 
     def step(self) -> None:
         if self.completed or not self.arrived:
@@ -155,6 +163,9 @@ class CustomerAgent(Agent):
         if self._reduce_patience(time_cost, "time"):
             return
 
+        if self._apply_same_tile_crowding():
+            return
+
         self._interact_with_visible_items()
 
         if self.state == "checkout":
@@ -162,7 +173,7 @@ class CustomerAgent(Agent):
             return
 
         target = self._choose_target()
-        if target == self.model.layout.checkout and self.pos == self.model.layout.checkout:
+        if self.model.layout.is_checkout(target) and self.pos == target:
             self._enter_checkout()
             return
 
@@ -171,7 +182,7 @@ class CustomerAgent(Agent):
 
         self._interact_with_visible_items()
 
-        if not self.remaining_items and self.pos == self.model.layout.checkout:
+        if not self.remaining_items and self.model.layout.is_checkout(self.pos):
             self._enter_checkout()
 
     def _reduce_patience(self, amount: float, reason: str) -> bool:
@@ -185,7 +196,7 @@ class CustomerAgent(Agent):
                 return True
             return False
 
-        if self.state != "shopping" or not self.remaining_items:
+        if self.state != "shopping":
             return False
 
         self.patience_level = max(0.0, self.patience_level - amount)
@@ -223,9 +234,23 @@ class CustomerAgent(Agent):
         self.model.record_abandonment(self, reason)
         self.remaining_items.clear()
 
+    def _apply_same_tile_crowding(self) -> bool:
+        occupants = self.model.count_customers_on_tile(self.pos)
+        extra_shoppers = max(0, occupants - self.model.TILE_COMFORT_CAPACITY)
+        if extra_shoppers <= 0:
+            return False
+
+        crowding_cost = (
+            extra_shoppers
+            * self.model.minutes_per_step
+            * self.SAME_TILE_CROWDING_COST_PER_SHOPPER
+        )
+        self.model.record_tile_crowding_patience_loss(crowding_cost)
+        return self._reduce_patience(crowding_cost, "congestion")
+
     def _choose_target(self):
         if not self.remaining_items:
-            return self.model.layout.checkout
+            return self.model.checkout_target_for(self)
 
         if self.shopper_type == "bargain_hunter":
             promoted = [
@@ -244,7 +269,7 @@ class CustomerAgent(Agent):
 
         item = self.model.layout.nearest_item(self.remaining_items, self.pos)
         if item is None:
-            return self.model.layout.checkout
+            return self.model.checkout_target_for(self)
 
         if self.model.random.random() > self.profile.familiarity:
             zone = self.model.layout.zone_centers.get(item.category)
@@ -278,6 +303,18 @@ class CustomerAgent(Agent):
             familiarity=self.profile.familiarity,
         )
         if step != self.pos:
+            if not self.model.can_enter_tile(step, mover=self):
+                self.congestion_delay += 1
+                self.model.record_tile_capacity_block()
+                blocked_cost = (
+                    self.model.minutes_per_step
+                    * self.BLOCKED_TILE_PATIENCE_MULTIPLIER
+                )
+                self.model.record_tile_crowding_patience_loss(blocked_cost)
+                if self._reduce_patience(blocked_cost, "congestion"):
+                    return True
+                self.path_history.append(self.pos)
+                return False
             self.model.grid.move_agent(self, step)
         self.path_history.append(self.pos)
         return False
@@ -340,13 +377,14 @@ class CustomerAgent(Agent):
             self.unlisted_purchases.append(item.name)
 
     def _enter_checkout(self) -> None:
-        self.state = "checkout"
-        self.checkout_wait = self.model.estimate_checkout_wait()
+        self.checkout_position = self.pos
+        self.checkout_wait = self.model.estimate_checkout_wait(self.checkout_position)
         self.checkout_wait_initial = self.checkout_wait
         self.checkout_wait_initial_minutes = round(
             self.checkout_wait * self.model.minutes_per_step,
             2,
         )
+        self.state = "checkout"
         for item in self.model.layout.checkout_items():
             if item.name not in self.bought_item_names and self._will_buy_impulse(item, 0):
                 self._buy_item(item, planned=False)
