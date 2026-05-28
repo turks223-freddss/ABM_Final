@@ -1,0 +1,273 @@
+\documentclass[12pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}
+\usepackage{hyperref}
+\usepackage{xurl}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=black,
+    urlcolor=blue
+}
+
+\setstretch{1.5}
+
+\newcommand{\aparef}[1]{\par\noindent\hangindent=0.5in\hangafter=1 #1\par}
+
+\title{Research Background for the Grocery Store Layout Simulation}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Purpose of the Research Background}
+
+This research section supports the assumptions used in the grocery store agent-based model (ABM), particularly the store layout, the time-of-day traffic pattern, the product categories included in shopping lists, and the placement of items inside the simulated store. The search prioritized Philippine studies and reports. When Philippine evidence was limited, broader peer-reviewed grocery-retail research was used to support general store-layout and shopping-behavior assumptions.
+
+\section{Store Layout as a Basis for the Simulation Environment}
+
+The simulation compares three layout environments: grid, loop or racetrack, and free-flow. This is consistent with retail-layout literature identifying grid, freeform, and racetrack as the common conventional store-layout types used in grocery and retail studies (Vrechopoulos et al., 2004). The grid layout is especially appropriate as the baseline grocery layout because grocery stores commonly use orthogonal aisles and a general grid structure, while still varying the size and location of departments such as produce, dairy, pantry, and beverages (Ozgormus \& Smith, 2020). This supports the model's use of a grid store as the efficiency-focused layout and the loop/free-flow layouts as alternative environments for comparing exposure, travel time, congestion, and impulse purchases.
+
+Philippine evidence also supports treating layout as an operational factor rather than just a visual design choice. In a Manila-focused study of independent grocery stores, Andrada et al. (2020) found that important layout-related factors included shelf organization, shelf height, aisle space, counter aisle space, label size, lighting, temperature, baggage counter availability, product availability, prices, and promotions. Their regression model identified shelf organization, shelf height, aisle space, temperature, label size, baggage counter availability, and lighting as factors affecting customer satisfaction. This directly supports the ABM's inclusion of shelf arrangement, aisle movement, checkout lanes, queueing, congestion, promotions, and product visibility.
+
+Another Philippine source supports the idea that queueing and aisle space should be treated as real customer-experience problems. Gutierrez and Jegasothy (2010) conducted store-exit interviews with 500 urban Filipino supermarket customers and reported shopping problems such as slow queues, stockouts, and crowded or narrow aisles. Their study also found that convenient location and low prices were major reasons for supermarket patronage, while complete assortment and easy-to-find items were also mentioned. This supports the model's focus on queue waiting, aisle crowding, product availability, product search, and Filipino shopping-list necessities.
+
+The compact size of the simulated environment is also defensible for a small grocery-store setting. Seva et al. (2019), in a Philippine grocery product-arrangement study, selected a representative grocery store using criteria from the Philippine Amalgamated Supermarkets Association: at least three checkout counters, self-service operation, and a land area of about 200--299 square meters. The simulation similarly uses a compact self-service grocery environment with multiple checkout counters, walkable aisles, shelf cells, and queue cells.
+
+\section{Product Density Across Layout Types}
+
+The simulation may defensibly assign fewer shelf cells or product items to the loop and free-flow layouts than to the grid layout. This is because the grid layout is designed around repeated straight aisles and shelf runs, which makes it efficient when a store carries many product types or needs to maximize space. Retail-management material from Lumen Learning states that grid layouts are used in supermarkets, drugstores, and big-box stores when retailers carry many products or need to maximize space, while free-flow layouts are ideal for smaller amounts of merchandise and have less space for product display (Freedom Learning Group, n.d.). This directly supports using the grid layout as the highest-product-density baseline in the ABM.
+
+The loop or racetrack layout can also justify a lower item count than a full grid because it reserves floor area for a prescribed customer path. In the same retail-layout comparison, loop layouts are described as layouts that guide customers through merchandise in a controlled path and encourage browsing, but are less appropriate for high-turnover stores where customers need to quickly retrieve items (Freedom Learning Group, n.d.). In simulation terms, a loop layout may trade some shelf capacity for a larger circulation path, more controlled exposure, and wider movement areas. Therefore, the model can represent loop stores with fewer shelf/product cells than the grid while still increasing exposure to the products that remain.
+
+Shelf-space research supports the mechanism behind this assumption. H\"ubner et al. (2020) described shelf space as a scarce retail resource and explained that product assortment and shelf-space allocation are interdependent when shelf space is restricted. They also noted that the shelf space available for a category is determined by earlier store-layout planning decisions. Thus, if a loop or free-flow layout allocates more area to open paths, walls, displays, or shopper circulation, the available shelf area can decrease; fewer shelf slots can then mean a smaller assortment, fewer facings, or fewer product items in the simulation.
+
+This assumption should be presented as a modeling choice rather than a universal rule. A large real-world loop store could still carry many products, and a small grid store could carry fewer products. However, for a fixed-size simulated store footprint, assigning fewer product cells to loop and free-flow layouts is consistent with the idea that grid layouts maximize product-display efficiency, while loop/free-flow layouts emphasize browsing, experience, and movement.
+
+\section{Peak Shopping Time in Grocery Stores}
+
+For the Philippine setting, the strongest directly relevant evidence found was from the Manila independent grocery-store study by Andrada et al. (2020). Their interviews reported peak hours from 2:00 p.m. to 7:00 p.m.; during this period, all four counters in their proposed layout were recommended to be opened, while only two counters were needed during non-peak hours. This supports modeling heavier customer arrivals in the afternoon through early evening and increasing the importance of checkout queue capacity during that window.
+
+Because detailed Philippine grocery footfall-by-hour datasets are scarce in open literature, a broader benchmark was also reviewed. USDA Economic Research Service time-use data for the United States found weekday grocery-shopping peaks at 11:00 a.m.--12:59 p.m. and 3:00 p.m.--3:59 p.m., while weekend grocery shopping peaked at 11:00 a.m.--12:59 p.m. (Zeballos \& Ralston, 2019). This international evidence does not replace the Philippine result, but it supports the idea that grocery traffic is not flat during the day and that a simulation should use time-of-day arrival variation rather than a constant arrival rate.
+
+For the ABM, the most defensible Philippine-based calibration is therefore an afternoon-to-evening high-traffic period, especially 2:00 p.m.--7:00 p.m. A secondary lunch or late-morning bump may be added if the researchers want to reflect broader international time-use patterns.
+
+\section{Common Grocery Categories}
+
+The item categories in the simulation are broadly aligned with Filipino household food-consumption evidence. In the 2013 Philippines National Nutrition Survey analysis, Angeles-Agdeppa et al. (2019) reported that grains, meat and protein sources, sweets, and vegetables were among the top major food groups consumed by Filipino adults. Refined rice, pork, and bread contributed substantially to daily energy and nutrient intake, while vegetable, fruit, and milk consumption were relatively low. This supports assigning high shopping-list probabilities to staple categories such as rice or pantry staples, bread, meat/protein, and selected produce, while still including dairy and other categories at lower probabilities.
+
+Household-level Philippine evidence gives similar support. Using the 2018 Expanded National Nutrition Survey, Angeles-Agdeppa et al. (2023) reported that rice was the top commonly consumed food item among Filipino households, with a rice-vegetable-fish/meat pattern remaining the usual meal pattern. Rice, vegetables, and meat were also the top three wasted foods, which implies frequent household purchasing and preparation of these categories. This supports including produce, meat, pantry staples, and household essentials as recurring planned items in the simulated shopping lists.
+
+The Philippine grocery-layout study by Andrada et al. (2020) described grocery stores as selling food categories such as vegetables, fruits, rice, wheat, meat, snacks, and bread, with additional non-food categories such as general merchandise, cleaning supplies, paper products, and health/beauty care. This is consistent with the simulation's category set: produce, bakery, pantry, beverages, dairy, meat, snacks, frozen items, household items, personal care, and checkout impulse items.
+
+\begin{table}[h]
+\centering
+\caption{Research support for simulated shopping-list categories}
+\begin{tabular}{>{\raggedright\arraybackslash}p{0.25\textwidth} >{\raggedright\arraybackslash}p{0.35\textwidth} >{\raggedright\arraybackslash}p{0.28\textwidth}}
+\toprule
+\textbf{Simulation category} & \textbf{Research basis} & \textbf{Model implication} \\
+\midrule
+Pantry staples & Rice is the most common household item; grains dominate Filipino adult diets (Angeles-Agdeppa et al., 2019, 2023). & Rice, pasta, oil, flour, sugar, canned goods, and similar pantry items should appear often in shopping lists. \\
+Produce & Vegetables remain part of the usual rice-vegetable-fish/meat meal pattern (Angeles-Agdeppa et al., 2023). & Produce should be a normal planned category, not only an impulse category. \\
+Meat/protein & Meat and protein sources are major consumed food groups (Angeles-Agdeppa et al., 2019). & Meat/protein items should have moderate to high planned-purchase probability. \\
+Bakery & Bread is a notable contributor to energy and nutrient intake (Angeles-Agdeppa et al., 2019). & Bread and bakery items are reasonable frequent shopping-list items. \\
+Snacks and sweets & Sweets are among the top major food groups consumed (Angeles-Agdeppa et al., 2019). & Snacks can appear as planned items but should also support impulse buying. \\
+Household and personal care & Philippine grocery studies include cleaning supplies, paper products, health/beauty care, toiletries, and laundry needs (Andrada et al., 2020; Seva et al., 2019). & Non-food aisles are justified in a grocery simulation and can create additional search paths. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Item Location and Product-Arrangement Assumptions}
+
+Philippine product-arrangement evidence supports grouping products by use and placing related items near each other. Seva et al. (2019) used open card sorting and cluster analysis on 39 grocery products in a Philippine grocery setting. Their participants formed clusters such as beverages, condiments, canned goods and instant noodles, snacks, toiletries, baby products, and laundry needs. The study concluded that shoppers expect products to be grouped according to use, and that complementary or substitute products should be placed close to each other. This supports the simulation's category-based shelf zones and the use of zones such as pantry, beverages, snacks, household, and personal care.
+
+Specific Philippine placement guidance also supports several ABM assumptions. Andrada et al. (2020) noted that eggs and rice should be placed toward the back of the store, while sweets and snacks should be placed closer to the front to attract customers. They also discussed premium shelf locations: eye-level shelves are suited for best-selling products, bottom shelves for heavy or large products, and top shelves for costly or slower-moving products. In the simulation, this supports placing essential or list-driven goods deeper inside the store and giving snacks or checkout items higher exposure.
+
+Broader grocery-layout research also supports category adjacency decisions. Ozgormus and Smith (2020) noted that grocery layout planning considers product-category proximity, such as placing fresh fruits near fresh vegetables and avoiding undesirable adjacencies such as pet food beside fresh meat. This supports treating category location as an experimental variable in the ABM because changing adjacency can affect path length, exposure, and unplanned buying opportunities.
+
+\section{Shopping Lists and Impulse Buying}
+
+The ABM separates planned purchases, unlisted purchases, and impulse purchases. This distinction is supported by consumer-behavior research on grocery shopping lists. Block and Morwitz (1999) found that consumers wrote on their shopping lists about 40\% of the items they eventually purchased, and more than 80\% of listed items were purchased. This supports modeling shoppers as having planned lists while still allowing additional unlisted purchases.
+
+Impulse buying is also important in grocery settings. Bellini et al. (2017) found that pre-shopping preparation influences impulse buying: more preparation tends to reduce impulse buying, while shopping enjoyment and impulse-buying tendency affect unplanned purchases through positive affect and buying urges. This supports the ABM's shopper types, where mission-driven or loyal shoppers can be modeled as more list-focused, while browsers or impulse buyers are more sensitive to exposure, promotions, and high-visibility items.
+
+Additional grocery impulse-buying research strengthens the promotion and visibility assumptions. Kacen et al. (2012) studied impulse purchases in grocery shopping trips and found that product characteristics and retailing factors both influence impulse purchase likelihood, with high--low pricing being an important retail factor. This supports the model's use of sale items, discount awareness, high-exposure products, and checkout/snack impulse categories.
+
+Shopper-type variation can also be defended through shopping-mission and trip-type research. Sarantopoulos et al. (2016) introduced shopping missions as identifiable shopper need states based on product-category combinations in grocery basket data. Hunneman et al. (2017) showed that grocery shoppers evaluate stores differently depending on trip type, distinguishing major trips from regular and special fill-in trips. These studies support the model's use of heterogeneous shopper profiles rather than one average shopper.
+
+Layout affects impulse opportunities because it controls exposure. Ozgormus and Smith (2020) argued that grocery block layout affects customer exposure to goods and can influence impulse purchases. This supports the model's layout comparison: a grid layout may reduce travel and search time, while loop and free-flow layouts may increase product exposure and therefore unplanned or impulse purchases.
+
+\section{Agent-Based Simulation, Crowding, and Checkout Behavior}
+
+The simulation method is also defensible. Agent-based simulation has been used directly for retail layout and customer-density questions. Pantano et al. (2021) combined grocery-store field data with agent-based simulations to examine how changes in store layout affect customer density. Vanhaverbeke and Macharis (2011) also argued that consumer spatial behavior and retail location or operational strategy can be studied through an agent-based modeling approach. Therefore, representing individual shoppers as agents with their own shopping lists, paths, and decision rules is appropriate for the objective of comparing store layouts.
+
+The model's use of shopper movement, path history, and layout-dependent travel is consistent with supermarket path research. Larson et al. (2005) used RFID-tagged shopping carts to study actual supermarket shopping paths and identified recurring path patterns. This supports treating movement path, aisle access, and layout geometry as measurable parts of grocery-shopping behavior rather than as decorative features of the simulation.
+
+The crowding and tile-avoidance rules are supported by retail-crowding and interpersonal-distance research. Aylott and Mitchell (1998) identified crowd density, queueing, store layout or relocation, time pressure, and product assortment as grocery-shopping stressors. In the Philippine context, Gutierrez and Jegasothy (2010) reported crowded or narrow aisles and slow queues as supermarket shopping problems. Luck and Benkenstein (2015) found that low interpersonal distance between consumers in supermarket shelves can increase negative emotions, increase avoidance behavior, and reduce retailer-relevant consumer behavior. Eroglu et al. (2005) showed that perceived retail crowding affects shopping value and satisfaction through shopper emotions. Aydinli et al. (2021), using a large grocery-shopping field dataset, further found that perceived crowding changes basket composition. These findings support the ABM rules in which shoppers prefer empty neighboring tiles, lose patience under crowding, and may change or shorten their shopping behavior when density becomes high.
+
+Pedestrian-simulation literature further supports the use of local movement rules. Helbing and Moln\'ar (1995) modeled pedestrian movement through social forces that represent internal motivations such as desired direction and repulsion from other pedestrians. Cellular-automata pedestrian models also commonly represent people and movement constraints on a discrete grid (Blue \& Adler, 1999). The ABM's tile system is therefore a simplified retail version of standard microscopic movement modeling: cells represent local movement opportunities, and crowding penalties represent reduced comfort or local friction.
+
+Checkout waiting and abandonment are supported by queueing research on customer impatience. Dai and He (2013) modeled many-server queues with customer abandonment, where waiting customers may leave the system without service. This supports modeling checkout waiting, checkout patience, and abandonment while a shopper is still farther back in the line. In the ABM, shoppers no longer abandon once they are at the front queue tile or already at the cashier; this is a modeling simplification that represents the transition from waiting to imminent service.
+
+Supermarket-specific queue studies make the checkout parameters more acceptable as scenario values. Mohamad Safuri and Kamardan (2022) used Arena simulation to study supermarket queue management and reported an average queue length of three customers in their baseline condition. Bataona et al. (2020) analyzed cashier operations in an Indonesian supermarket and found that the optimal number of open cashier lines changed across afternoon and evening time blocks. Chandra Chan et al. (2023) used direct observation and queueing theory in a supermarket cashier study and reported evening queue conditions around 6:00 p.m.--8:00 p.m., including three customers in line and several-minute payment/system times. These studies do not make a three-tile queue universal, but they make the ABM's three queue cells, time-varying checkout pressure, and multi-minute cashier service times defensible as compact-supermarket assumptions.
+
+Time pressure supports the low-patience and closing-period rules. Park et al. (1989) conducted a grocery field experiment and found that store knowledge and time available for shopping affected intended-purchase failure, unplanned buying, product/brand switching, and purchase-volume deliberation. Thus, it is defensible for the ABM to make low remaining patience or approaching closing time reduce continued searching and redirect shoppers toward checkout. The exact 40\% patience trigger and 8:00 p.m. cutoff remain calibration settings, but the behavioral direction is research-supported.
+
+Finally, because some parameters are necessarily scenario-specific, sensitivity analysis is the professional way to defend them. Schouten et al. (2014) showed that sensitivity analysis helps interpret how agent-based simulation outputs respond to parameter changes, and Borgonovo et al. (2022) proposed a protocol for sensitivity analysis of agent-based models. Therefore, assumptions such as patience thresholds, tile-capacity limits, and layout-score weights should be presented as calibrated parameters to test, not as unsupported claims.
+
+\section{Sanity-Check Traceability Matrix}
+
+Table \ref{tab:traceability} maps the major current simulation rules to their research basis. The audit found that the main mechanisms are supported by literature, while exact numerical values should be described as calibration settings. This distinction is important: the literature justifies why the mechanism belongs in the model, while the simulation parameters define one specific scenario that can be changed during sensitivity analysis.
+
+\begingroup
+\small
+\setlength{\tabcolsep}{3pt}
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.20\textwidth} >{\raggedright\arraybackslash}p{0.27\textwidth} >{\raggedright\arraybackslash}p{0.29\textwidth} >{\raggedright\arraybackslash}p{0.11\textwidth}}
+\caption{Traceability of simulation rules to research support}
+\label{tab:traceability}\\
+\toprule
+\textbf{Model part} & \textbf{Current simulation behavior} & \textbf{Research defense} & \textbf{Audit status} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Model part} & \textbf{Current simulation behavior} & \textbf{Research defense} & \textbf{Audit status} \\
+\midrule
+\endhead
+
+Agent-based model & Each shopper is an individual agent with type, list, position, basket, patience, and state. & Agent-based retail simulations have been used to study consumer density, mobility, and layout decisions (Pantano et al., 2021; Vanhaverbeke \& Macharis, 2011). & Supported \\
+
+Store layout comparison & The environment compares grid, loop/racetrack, and free-flow layouts. & These are recognized retail layout alternatives, with grid especially relevant to grocery contexts (Vrechopoulos et al., 2004; Ozgormus \& Smith, 2020). & Supported \\
+
+Grid as product-density baseline & Grid has the highest number of shelf/product cells; loop and free-flow have fewer product cells in the fixed footprint. & Grid layouts maximize display efficiency for many products; shelf space is scarce and affects assortment decisions (Freedom Learning Group, n.d.; H\"ubner et al., 2020). & Supported as a fixed-footprint assumption \\
+
+Compact store size & The simulation uses a compact self-service grocery with multiple counters, aisles, shelves, and queues. & Philippine grocery research used representative self-service grocery criteria including at least three checkout counters and around 200--299 square meters (Seva et al., 2019). & Supported \\
+
+Shelf and category zones & Products are grouped into category zones such as pantry, produce, meat, bakery, snacks, household, and personal care. & Philippine card-sorting/product-arrangement and grocery-layout studies support grouping by use and category (Seva et al., 2019; Andrada et al., 2020). & Supported \\
+
+Common shopping-list items & Lists include Filipino grocery categories such as rice, cooking oil, noodles, bread, meat/fish, vegetables, snacks, toiletries, and cleaning items. & Philippine nutrition and grocery studies support staple food and household/personal-care categories (Angeles-Agdeppa et al., 2019, 2023; Andrada et al., 2020). & Supported \\
+
+Item placement & Essential/list-driven goods can be deeper in the store; snacks and checkout items can have higher exposure near front/cashier areas. & Philippine layout guidance places eggs/rice toward the back and sweets/snacks closer to front exposure areas; broader grocery layout studies support category-location effects (Andrada et al., 2020; Ozgormus \& Smith, 2020). & Supported \\
+
+Promotions and visibility & Products can be on sale; visible and promoted items have stronger influence on unplanned buying. & Grocery impulse-buying literature supports the role of exposure, shopping enjoyment, preparation, and promotional stimuli in unplanned buying (Bellini et al., 2017; Kacen et al., 2012). & Supported; exact multipliers are sensitivity parameters \\
+
+Shopping lists and unplanned purchases & The ABM separates planned purchases, unlisted purchases, and unplanned/impulse purchases. & Shopping-list research shows that shoppers purchase many listed items but also buy unlisted items; impulse-buying studies support additional unplanned purchases (Block \& Morwitz, 1999; Bellini et al., 2017). & Supported \\
+
+Shopper types & The model uses mission-driven, bargain hunter, impulse buyer, loyal shopper, and browser profiles with different list sizes, patience, familiarity, exploration, discount awareness, and impulse probability. & Literature supports heterogeneity in shopping preparation, impulse tendency, discount response, shopping missions, and trip types; the named profile values are simulation archetypes (Block \& Morwitz, 1999; Bellini et al., 2017; Hunneman et al., 2017; Sarantopoulos et al., 2016). & Supported; exact mix is a scenario setting \\
+
+Time-of-day traffic & Arrival pressure varies across the day, with the strongest Philippine-informed peak from 2:00 p.m. to 7:00 p.m. & Philippine grocery interviews reported peak hours from 2:00 p.m. to 7:00 p.m.; USDA time-use evidence supports non-uniform grocery traffic more generally (Andrada et al., 2020; Zeballos \& Ralston, 2019). & Supported; shares calibrated \\
+
+Pathing and movement & Shoppers move through passable aisles, follow layout constraints, and generate path histories. & Actual supermarket paths are measurable and patterned, supporting path-based analysis (Larson et al., 2005). & Supported \\
+
+Avoidance of occupied tiles & Shoppers prefer empty neighboring tiles and only share a tile when no empty usable option exists. & Low interpersonal distance in supermarket aisles increases avoidance behavior; Philippine shoppers also report narrow/crowded aisles as problems; pedestrian simulations model local repulsion/cell occupancy (Blue \& Adler, 1999; Gutierrez \& Jegasothy, 2010; Helbing \& Moln\'ar, 1995; Luck \& Benkenstein, 2015; Horikomi \& Mizuno, 2025). & Supported; exact tile capacity is calibrated \\
+
+Crowding and patience loss & Same-tile crowding, nearby traffic, and blocked movement reduce patience and can lead to checkout or abandonment. & Retail crowding affects shopping value, satisfaction, basket composition, and avoidance behavior (Eroglu et al., 2005; Aydinli et al., 2021; Luck et al., 2015). & Mechanism supported; costs calibrated \\
+
+Checkout lanes and queue wait & Shoppers move to assigned cashier lanes and wait based on cashier service time and queue length. & Queueing and supermarket studies support modeling checkout through waiting time, service time, queue length, server utilization, and customer patience (Bataona et al., 2020; Chandra Chan et al., 2023; Dai \& He, 2013; Gutierrez \& Jegasothy, 2010; Mohamad Safuri \& Kamardan, 2022). & Supported; service times calibrated \\
+
+Checkout abandonment & Shoppers can abandon while waiting farther back in line if checkout patience runs out, but not once they are at the front or at the cashier. & Queue abandonment is a standard expression of impatience while waiting; the front-of-line rule is a model simplification for imminent service (Dai \& He, 2013). & Supported as simplification \\
+
+Low-patience checkout trigger & At less than 40\% remaining patience, shoppers stop searching and head to checkout. & Grocery time-pressure research supports reduced intended-purchase fulfillment and changed shopping behavior when time available is constrained (Park et al., 1989). & Supported mechanism; 40\% is calibrated \\
+
+8:00 p.m. checkout cutoff & Since the store closes at 9:00 p.m., active shoppers begin heading to checkout at 8:00 p.m. & Time-pressure research supports behavioral changes when time available for shopping is reduced; Philippine peak-hour evidence and queue studies support a closing/checkout management period (Andrada et al., 2020; Chandra Chan et al., 2023; Park et al., 1989). & Supported mechanism; cutoff time is calibrated \\
+
+Dashboard result figures & Results emphasize completed/not completed shopping lists, planned/unplanned purchases, and completed/abandoned trips by shopper type. & These outcomes follow from shopping-list, impulse-buying, crowding, and queue-abandonment literature cited above. & Supported \\
+
+Layout score & The score combines trip completion, list completion, satisfaction, abandonment, congestion, and unplanned purchasing into one summary value. & Multi-criteria decision methods are commonly used to aggregate several criteria in retail/facility decisions, and ABM sensitivity analysis can test weight robustness (Burnaz \& Topcu, 2006; Borgonovo et al., 2022; Schouten et al., 2014). & Derived metric; weights should be tested \\
+
+\bottomrule
+\end{longtable}
+\endgroup
+\normalsize
+
+\section{Assumptions and Calibration Notes}
+
+The main improvement from the additional search is that the model assumptions can now be separated into two defensibility levels. Some assumptions have direct local support: the compact self-service store with multiple checkout counters, the importance of aisle space and queueing, the common Filipino grocery categories, and the 2:00 p.m.--7:00 p.m. peak window are supported by Philippine sources (Andrada et al., 2020; Angeles-Agdeppa et al., 2019, 2023; Gutierrez \& Jegasothy, 2010; Seva et al., 2019). These can be described as Philippine-informed assumptions.
+
+Other assumptions have strong mechanism support but should remain calibrated simulation parameters. The 40\% patience trigger is supported by time-pressure research, but 40\% itself is a chosen threshold. The 8:00 p.m. checkout cutoff is supported by time-pressure and evening-queue evidence, but the exact cutoff is a scenario rule for a store closing at 9:00 p.m. The three queue cells and multi-minute service times are supported by supermarket queue studies, but exact queue depth and service-time distributions should be varied in sensitivity tests. Tile capacity and crowding penalties are supported by crowding and pedestrian-movement research, but the exact crowding cost per tile is also a calibration setting. Layout-score weights are a derived multi-criteria summary, so their conclusions should be checked under alternative weight sets.
+
+For a thesis or defense presentation, the recommended wording is therefore: ``The literature supports the behavioral mechanisms used in the ABM, while the exact numeric thresholds are calibrated scenario parameters tested through sensitivity analysis.'' This is more professional than claiming that a single paper proves a universal 40\% patience rule, exact queue length, or exact layout-score weight.
+
+\section{How the Literature Supports the Simulation}
+
+The research supports the simulation in seven main ways. First, agent-based simulation is an appropriate method for modeling individual retail shoppers, movement, and store density (Pantano et al., 2021; Vanhaverbeke \& Macharis, 2011). Second, grid, racetrack/loop, and free-flow layouts are standard retail-layout alternatives, and grocery stores commonly use a grid-like structure as a baseline (Vrechopoulos et al., 2004; Ozgormus \& Smith, 2020). Third, Philippine studies show that shelf organization, aisle space, labels, promotions, checkout capacity, queueing, and product availability matter to grocery-store satisfaction and operations (Andrada et al., 2020; Gutierrez \& Jegasothy, 2010). Fourth, retail-layout and shelf-space literature supports giving the grid layout a higher product density than loop or free-flow layouts when the simulated store footprint is fixed, because grid layouts are associated with maximizing product display space and shelf-space availability affects assortment size (Freedom Learning Group, n.d.; H\"ubner et al., 2020). Fifth, Filipino food-consumption studies justify the inclusion of rice or pantry staples, produce, meat/protein, bread, snacks, beverages, household items, and personal-care products in the simulated shopping lists (Angeles-Agdeppa et al., 2019, 2023; Seva et al., 2019). Sixth, local evidence supports a 2:00 p.m.--7:00 p.m. peak window, with international time-use data supporting the broader idea of non-uniform grocery traffic over the day (Andrada et al., 2020; Zeballos \& Ralston, 2019). Seventh, retail crowding and queueing research supports the model's behavioral rules for avoiding crowded tiles, losing patience under congestion, moving to checkout under low patience, and abandoning while waiting in a queue (Aydinli et al., 2021; Dai \& He, 2013; Eroglu et al., 2005; Luck \& Benkenstein, 2015).
+
+\section{Limitations of the Evidence}
+
+Open Philippine research on exact grocery-store peak hours is limited. The best local evidence found came from interviews in Manila independent grocery stores, not from a national transaction or footfall dataset. Therefore, the ABM should describe its peak-hour setting as a Philippine-informed assumption rather than a national standard. Similarly, the common-item evidence is based mainly on household food consumption and nutrition surveys, which are appropriate for shopping-list categories but do not provide exact store-level basket probabilities. The evidence supporting lower product density in loop and free-flow layouts is also not Philippine-specific; it comes from general retail-layout guidance and broader shelf-space research.
+
+The full sanity check shows that the model's mechanisms are defensible, and several formerly weak assumptions now have stronger supporting literature. The 40\% low-patience checkout trigger is supported by time-pressure research as a behavioral mechanism, the three-tile queue and multi-minute service range are supported by supermarket queue studies as plausible compact-store values, and tile avoidance is supported by both supermarket interpersonal-distance evidence and pedestrian-movement models. However, the exact numeric thresholds should still be described as calibrated scenario settings rather than universal Philippine grocery-store facts. These values should be tested through sensitivity analysis, especially the patience threshold, queue depth, tile capacity, shopper-type percentages, impulse multipliers, checkout cutoff time, and layout-score weights.
+
+\section*{References}
+
+\aparef{Andrada, M. F., Prudenciano, H. L., \& Reyes, J. B. (2020). Layout design model for independent grocery stores in the Philippines. In \textit{Proceedings of the International Conference on Industrial Engineering and Operations Management} (pp. 1719--1729). IEOM Society International. \url{https://www.ieomsociety.org/ieom2020/papers/272.pdf}}
+
+\aparef{Angeles-Agdeppa, I., Sun, Y., Denney, L., Tanda, K. V., Octavio, R. A. D., Carriquiry, A., \& Capanzana, M. V. (2019). Food sources, energy and nutrient intakes of adults: 2013 Philippines National Nutrition Survey. \textit{Nutrition Journal, 18}, Article 59. \url{https://doi.org/10.1186/s12937-019-0481-z}}
+
+\aparef{Angeles-Agdeppa, I., Toledo, M. B., \& Zamora, J. A. T. (2023). Does plate waste matter?: A two-stage cluster survey to assess the household plate waste in the Philippines. \textit{BMC Public Health, 23}, Article 17. \url{https://doi.org/10.1186/s12889-022-14894-z}}
+
+\aparef{Aydinli, A., Lamey, L., Millet, K., ter Braak, A., \& Vuegen, M. (2021). How do customers alter their basket composition when they perceive the retail store to be crowded? An empirical study. \textit{Journal of Retailing, 97}(2), 207--216. \url{https://doi.org/10.1016/j.jretai.2020.05.004}}
+
+\aparef{Aylott, R., \& Mitchell, V.-W. (1998). An exploratory study of grocery shopping stressors. \textit{International Journal of Retail \& Distribution Management, 26}(9), 362--373. \url{https://doi.org/10.1108/09590559810237908}}
+
+\aparef{Bataona, B. L. V., Nyoko, A. E. L., \& Nursiani, N. P. (2020). Analisis sistem antrian dalam optimalisasi layanan di Supermarket Hyperstore. \textit{Journal of Management: Small and Medium Enterprises (SMEs), 12}(2), 225--237. \url{https://doi.org/10.35508/jom.v12i2.2695}}
+
+\aparef{Bellini, S., Cardinali, M. G., \& Grandi, B. (2017). A structural equation model of impulse buying behaviour in grocery retailing. \textit{Journal of Retailing and Consumer Services, 36}, 164--171. \url{https://doi.org/10.1016/j.jretconser.2017.02.001}}
+
+\aparef{Blue, V. J., \& Adler, J. L. (1999). Cellular automata microsimulation of bidirectional pedestrian flows. \textit{Transportation Research Record, 1678}(1), 135--141. \url{https://doi.org/10.3141/1678-17}}
+
+\aparef{Block, L. G., \& Morwitz, V. G. (1999). Shopping lists as an external memory aid for grocery shopping: Influences on list writing and list fulfillment. \textit{Journal of Consumer Psychology, 8}(4), 343--375. \url{https://doi.org/10.1207/s15327663jcp0804_01}}
+
+\aparef{Borgonovo, E., Pangallo, M., Rivkin, J., Rizzo, L., \& Siggelkow, N. (2022). Sensitivity analysis of agent-based models: A new protocol. \textit{Computational and Mathematical Organization Theory, 28}(1), 52--94. \url{https://doi.org/10.1007/s10588-021-09358-5}}
+
+\aparef{Burnaz, S., \& Topcu, Y. I. (2006). A multiple-criteria decision-making approach for the evaluation of retail location. \textit{Journal of Multi-Criteria Decision Analysis, 14}(1--3), 67--76. \url{https://doi.org/10.1002/mcda.401}}
+
+\aparef{Chandra Chan, I. C. B., Paendong, M. S., \& Manurung, T. (2023). Analisis antrian pada ``Supermarket Cool'' Tomohon menggunakan teori antrian untuk menentukan pelayanan yang optimal. \textit{D'Cartesian, 12}(1), 26--34. \url{https://doi.org/10.35799/dc.12.1.2023.48046}}
+
+\aparef{Dai, J. G., \& He, S. (2013). Many-server queues with customer abandonment: Numerical analysis of their diffusion model. \textit{Stochastic Systems, 3}(1), 96--146. \url{https://doi.org/10.1287/11-SSY029}}
+
+\aparef{Eroglu, S. A., Machleit, K., \& Barr, T. F. (2005). Perceived retail crowding and shopping satisfaction: The role of shopping values. \textit{Journal of Business Research, 58}(8), 1146--1153. \url{https://doi.org/10.1016/j.jbusres.2004.01.005}}
+
+\aparef{Freedom Learning Group. (n.d.). Store layout designs. In \textit{Retail Management}. Lumen Learning. \url{https://courses.lumenlearning.com/wm-retailmanagement/chapter/store-layout-designs/}}
+
+\aparef{Gutierrez, B. P. B., \& Jegasothy, K. (2010). Identifying shopping problems and improving retail patronage among urban Filipino customers. \textit{Philippine Management Review, 17}, 66--79. \url{https://pmr.upd.edu.ph/index.php/pmr/article/view/173}}
+
+\aparef{Helbing, D., \& Moln\'ar, P. (1995). Social force model for pedestrian dynamics. \textit{Physical Review E, 51}(5), 4282--4286. \url{https://doi.org/10.1103/PhysRevE.51.4282}}
+
+\aparef{Horikomi, T., \& Mizuno, T. (2025). Interaction-aware agent-based simulation of customer trajectories in retail stores with transformer architectures. \textit{Scientific Reports, 15}, Article 38972. \url{https://doi.org/10.1038/s41598-025-22885-4}}
+
+\aparef{H\"ubner, A., Sch\"afer, F., \& Schaal, K. N. (2020). Maximizing profit via assortment and shelf-space optimization for two-dimensional shelves. \textit{Production and Operations Management, 29}(3). \url{https://doi.org/10.1111/poms.13111}}
+
+\aparef{Hunneman, A., Verhoef, P., \& Sloot, L. (2017). The moderating role of shopping trip type in store satisfaction formation. \textit{Journal of Business Research, 78}, 133--142. \url{https://doi.org/10.1016/j.jbusres.2017.05.012}}
+
+\aparef{Kacen, J. J., Hess, J. D., \& Walker, D. (2012). Spontaneous selection: The influence of product and retailing factors on consumer impulse purchases. \textit{Journal of Retailing and Consumer Services, 19}(6), 578--588. \url{https://doi.org/10.1016/j.jretconser.2012.07.003}}
+
+\aparef{Larson, J. S., Bradlow, E. T., \& Fader, P. S. (2005). An exploratory look at supermarket shopping paths. \textit{International Journal of Research in Marketing, 22}(4), 395--414. \url{https://doi.org/10.1016/j.ijresmar.2005.09.005}}
+
+\aparef{Luck, M., \& Benkenstein, M. (2015). Consumers between supermarket shelves: The influence of inter-personal distance on consumer behavior. \textit{Journal of Retailing and Consumer Services, 26}, 104--114. \url{https://doi.org/10.1016/j.jretconser.2015.06.002}}
+
+\aparef{Mohamad Safuri, A. A., \& Kamardan, M. G. (2022). Queue management and application in supermarket. \textit{Enhanced Knowledge in Sciences and Technology, 2}(1), 352--360. \url{https://doi.org/10.30880/ekst.2022.02.01.038}}
+
+\aparef{Ozgormus, E., \& Smith, A. E. (2020). A data-driven approach to grocery store block layout. \textit{Computers \& Industrial Engineering, 139}, Article 105562. \url{https://doi.org/10.1016/j.cie.2018.12.009}}
+
+\aparef{Pantano, E., Pizzi, G., Bilotta, E., \& Pantano, P. (2021). Enhancing store layout decision with agent-based simulations of consumers' density. \textit{Expert Systems with Applications, 182}, Article 115231. \url{https://doi.org/10.1016/j.eswa.2021.115231}}
+
+\aparef{Park, C. W., Iyer, E. S., \& Smith, D. C. (1989). The effects of situational factors on in-store grocery shopping behavior: The role of store environment and time available for shopping. \textit{Journal of Consumer Research, 15}(4), 422--433. \url{https://doi.org/10.1086/209182}}
+
+\aparef{Sarantopoulos, P., Theotokis, A., Pramatari, K., \& Doukidis, G. (2016). Shopping missions: An analytical method for the identification of shopper need states. \textit{Journal of Business Research, 69}(3), 1043--1052. \url{https://doi.org/10.1016/j.jbusres.2015.08.017}}
+
+\aparef{Schouten, M. A. H., Verwaart, T., \& Heijman, W. J. M. (2014). Comparing two sensitivity analysis approaches for two scenarios with a spatially explicit rural agent-based model. \textit{Environmental Modelling \& Software, 54}, 196--210. \url{https://doi.org/10.1016/j.envsoft.2014.01.003}}
+
+\aparef{Seva, R. R., Carandang, C., Lim, K., Khoo, J. M. A., Gutierrez, A. M. J. A., \& Tangsoc, J. C. (2019). Grocery product arrangement using cluster analysis. \textit{Lecture Notes in Engineering and Computer Science, 2239}, 459--463. \url{https://www.iaeng.org/publication/IMECS2019/IMECS2019_pp459-463.pdf}}
+
+\aparef{Vanhaverbeke, L., \& Macharis, C. (2011). An agent-based model of consumer mobility in a retail environment. \textit{Procedia - Social and Behavioral Sciences, 20}, 186--196. \url{https://doi.org/10.1016/j.sbspro.2011.08.024}}
+
+\aparef{Vrechopoulos, A. P., O'Keefe, R. M., Doukidis, G. I., \& Siomkos, G. J. (2004). Virtual store layout: An experimental comparison in the context of grocery retail. \textit{Journal of Retailing, 80}(1), 13--22. \url{https://doi.org/10.1016/j.jretai.2004.01.006}}
+
+\aparef{Zeballos, E., \& Ralston, K. (2019, November 21). Time to head to the grocery store? \textit{USDA Economic Research Service}. \url{https://www.ers.usda.gov/data-products/charts-of-note/chart-detail?chartId=95392}}
+
+\end{document}
