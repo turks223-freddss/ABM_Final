@@ -258,6 +258,7 @@ class StoreLayout:
         self.shelf_categories: Dict[Position, str] = {}
         self.hot_zones: set[Position] = set()
         self.loop_path: List[Position] = []
+        self.loop_entry_release_cell: Optional[Position] = None
         self.zone_centers: Dict[str, Position] = {}
         self.items: List[StoreItem] = []
         self.items_by_location: Dict[Position, List[StoreItem]] = {}
@@ -419,6 +420,7 @@ class StoreLayout:
             for cell in self._build_reference_loop_path()
             if cell not in blocked_cells
         ]
+        self.loop_entry_release_cell = self._find_loop_entry_release_cell()
         self.passable.update(self.loop_path)
 
         mid_y = self.height // 2
@@ -431,16 +433,16 @@ class StoreLayout:
             (self.checkout_positions[-1][0], self.front_service_y - 1),
         }
         self.zone_centers = {
-            "produce": (3, 11),
-            "bakery": (5, 3),
-            "pantry": (11, 7),
-            "beverages": (16, 7),
-            "dairy": (16, 3),
-            "meat": (11, 4),
-            "snacks": (21, 10),
-            "frozen": (21, 5),
-            "household": (3, 6),
-            "personal_care": (6, top - 1),
+            "produce": (3, 14),
+            "bakery": (6, 17),
+            "pantry": (3, 7),
+            "beverages": (20, 14),
+            "dairy": (20, 6),
+            "meat": (3, 3),
+            "snacks": (12, 17),
+            "frozen": (14, 2),
+            "household": (13, 3),
+            "personal_care": (20, 11),
             "checkout": self.checkout,
         }
 
@@ -475,11 +477,10 @@ class StoreLayout:
 
     def _build_reference_loop_path(self) -> List[Position]:
         start = self.entrance
-        top_y = max(2, self.height - 4)
-        bottom_y = 3
-        left_x = 4
+        top_y = max(2, self.front_service_y - self.CHECKOUT_QUEUE_DEPTH - 1)
+        bottom_y = 2
+        left_x = 3
         right_x = self.width - 4
-        target_x = self.checkout_positions[-1][0]
 
         waypoints = [
             start,
@@ -488,8 +489,8 @@ class StoreLayout:
             (left_x, bottom_y),
             (right_x, bottom_y),
             (right_x, top_y),
-            (target_x, top_y),
-            (target_x, self.front_service_y - self.CHECKOUT_QUEUE_DEPTH),
+            (start[0], top_y),
+            (start[0], start[1] - 1),
         ]
         path: List[Position] = []
         for current, target in zip(waypoints, waypoints[1:]):
@@ -498,7 +499,28 @@ class StoreLayout:
                 path.extend(segment[1:])
             else:
                 path.extend(segment)
-        return [cell for cell in path if 1 <= cell[0] < self.width - 1 and 1 <= cell[1] < self.height - 1]
+        blocked_cells = (
+            self._manual_shelf_cells()
+            | self.wall_cells
+            | self.all_checkout_queue_cells
+            | set(self.checkout_positions)
+        )
+        return [
+            cell
+            for cell in path
+            if 1 <= cell[0] < self.width - 1
+            and 1 <= cell[1] < self.height - 1
+            and cell not in blocked_cells
+        ]
+
+    def _find_loop_entry_release_cell(self) -> Optional[Position]:
+        for cell in self.loop_path:
+            if cell[0] == 3 and cell[1] <= 14:
+                return cell
+        for cell in self.loop_path:
+            if cell[1] <= self.height // 2:
+                return cell
+        return self.loop_path[-1] if self.loop_path else None
 
     def _straight_segment(self, start: Position, target: Position) -> List[Position]:
         x, y = start
@@ -843,7 +865,7 @@ class StoreLayout:
         if rng.random() < exploration_rate:
             return self.random_neighbor(start, rng)
 
-        if self.layout_name == "loop" and rng.random() < max(0.45, familiarity):
+        if self.layout_name == "loop" and rng.random() < max(0.80, familiarity):
             loop_step = self._next_loop_step(start, target)
             if loop_step is not None:
                 return loop_step
@@ -905,10 +927,11 @@ class StoreLayout:
         if start not in self.loop_path:
             return self._bfs_step(start, self.loop_path[start_idx])
 
+        if start_idx == target_idx:
+            return self._bfs_step(start, target)
+
         path_len = len(self.loop_path)
-        clockwise = (target_idx - start_idx) % path_len
-        counter = (start_idx - target_idx) % path_len
-        next_idx = (start_idx + 1) % path_len if clockwise <= counter else (start_idx - 1) % path_len
+        next_idx = (start_idx + 1) % path_len
         return self.loop_path[next_idx]
 
     def _nearest_loop_index(self, pos: Position) -> Optional[int]:

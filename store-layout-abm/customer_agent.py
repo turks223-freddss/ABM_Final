@@ -130,6 +130,11 @@ class CustomerAgent(Agent):
         self.checkout_time_spent = 0
         self.checkout_position = None
         self.force_checkout = False
+        self.loop_entry_released = False
+        self.following_loop_entry_route = False
+        self.following_recent_purchase_exit = False
+        self.recent_purchase_location = None
+        self.move_away_steps_remaining = 0
         self.completed = False
         self.completion_time: Optional[int] = None
         self.completion_minutes: Optional[float] = None
@@ -293,8 +298,20 @@ class CustomerAgent(Agent):
         return self._reduce_patience(crowding_cost, "congestion")
 
     def _choose_target(self):
+        self.following_loop_entry_route = False
+        self.following_recent_purchase_exit = False
         if self.should_head_to_checkout:
             return self.model.checkout_target_for(self)
+
+        loop_entry_target = self._loop_entry_route_target()
+        if loop_entry_target is not None:
+            self.following_loop_entry_route = True
+            return loop_entry_target
+
+        move_away_target = self._move_away_from_recent_purchase_target()
+        if move_away_target is not None:
+            self.following_recent_purchase_exit = True
+            return move_away_target
 
         if self.shopper_type == "browser":
             if self.model.random.random() < 0.65 and self.model.layout.hot_zones:
@@ -309,7 +326,7 @@ class CustomerAgent(Agent):
         if self.shopper_type == "bargain_hunter":
             promoted = [
                 name
-                for name in self.remaining_items
+                for name in self.items_left_to_find
                 if self.model.layout.items_by_name.get(name)
                 and self.model.layout.items_by_name[name].promotion
             ]
@@ -318,7 +335,7 @@ class CustomerAgent(Agent):
                 if item:
                     return item.location
 
-        item = self.model.layout.nearest_item(self.remaining_items, self.pos)
+        item = self.model.layout.nearest_item(self.items_left_to_find, self.pos)
         if item is None:
             return self.model.checkout_target_for(self)
 
@@ -326,6 +343,52 @@ class CustomerAgent(Agent):
             zone = self.model.layout.zone_centers.get(item.category)
             return zone or item.location
         return item.location
+
+    def _move_away_from_recent_purchase_target(self):
+        if (
+            self.move_away_steps_remaining <= 0
+            or self.recent_purchase_location is None
+            or self.pos is None
+        ):
+            return None
+
+        self.move_away_steps_remaining -= 1
+        options = [
+            cell
+            for cell in self.model.layout.neighbors(self.pos)
+            if self.model.can_enter_tile(cell, mover=self)
+            and manhattan(cell, self.recent_purchase_location) > manhattan(self.pos, self.recent_purchase_location)
+        ]
+        if not options:
+            return None
+
+        return max(
+            options,
+            key=lambda cell: (
+                manhattan(cell, self.recent_purchase_location),
+                self.model.random.random(),
+            ),
+        )
+
+    def _loop_entry_route_target(self):
+        layout = self.model.layout
+        if (
+            layout.layout_name != "loop"
+            or self.loop_entry_released
+            or not layout.loop_path
+        ):
+            return None
+
+        release_target = getattr(layout, "loop_entry_release_cell", None)
+        if release_target is None:
+            self.loop_entry_released = True
+            return None
+
+        if self.pos[1] <= release_target[1] or self.pos == release_target:
+            self.loop_entry_released = True
+            return None
+
+        return release_target
 
     def _move_toward(self, target) -> bool:
         local_crowd = self.model.count_customers_near(self.pos, radius=1, include_self=False)
@@ -350,8 +413,8 @@ class CustomerAgent(Agent):
             start=self.pos,
             target=target,
             rng=self.model.random,
-            exploration_rate=self.profile.exploration_rate,
-            familiarity=self.profile.familiarity,
+            exploration_rate=0.0 if self.following_forced_route else self.profile.exploration_rate,
+            familiarity=1.0 if self.following_forced_route else self.profile.familiarity,
         )
         step = self.model.preferred_movement_step(self, target, step)
         if step != self.pos:
@@ -412,7 +475,15 @@ class CustomerAgent(Agent):
         return self.model.random.random() < min(0.38, probability)
 
     def _buy_item(self, item: StoreItem, planned: bool) -> None:
+        if item.name in self.bought_item_names:
+            return
+
         self.bought_item_names.add(item.name)
+        self.remaining_items = [
+            name for name in self.remaining_items if name not in self.bought_item_names
+        ]
+        self.recent_purchase_location = item.location
+        self.move_away_steps_remaining = 2
         self.basket_value += item.sale_price
         self.basket_profit += item.profit
         on_shopping_list = item.name in self.shopping_list_names
@@ -420,8 +491,6 @@ class CustomerAgent(Agent):
 
         if planned:
             self.planned_purchases.append(item.name)
-            if item.name in self.remaining_items:
-                self.remaining_items.remove(item.name)
         else:
             self.impulse_purchases.append(item.name)
 
@@ -459,6 +528,18 @@ class CustomerAgent(Agent):
     @property
     def should_head_to_checkout(self) -> bool:
         return self.force_checkout or (bool(self.shopping_list) and not self.remaining_items)
+
+    @property
+    def following_forced_route(self) -> bool:
+        return self.following_loop_entry_route or self.following_recent_purchase_exit
+
+    @property
+    def items_left_to_find(self) -> List[str]:
+        return [
+            name
+            for name in self.remaining_items
+            if name not in self.bought_item_names
+        ]
 
     @property
     def patience_ratio(self) -> float:

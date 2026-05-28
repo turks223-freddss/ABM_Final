@@ -738,6 +738,21 @@ class StoreModel(Model):
         return wait
 
     def choose_entrance_position(self) -> Position:
+        if self.layout.layout_name == "loop":
+            loop_entrances = [
+                pos
+                for pos in self.layout.entrance_positions
+                if pos in self.layout.loop_path
+            ]
+            if loop_entrances:
+                return min(
+                    loop_entrances,
+                    key=lambda pos: (
+                        self.count_customers_on_tile(pos),
+                        self.random.random(),
+                    ),
+                )
+
         return min(
             self.layout.entrance_positions,
             key=lambda pos: (
@@ -856,6 +871,11 @@ class StoreModel(Model):
     ) -> Position:
         if preferred_step == customer.pos:
             return preferred_step
+
+        if getattr(customer, "following_loop_entry_route", False):
+            if self.can_enter_tile(preferred_step, mover=customer):
+                return preferred_step
+            return customer.pos
 
         options = self.layout.neighbors(customer.pos)
         if customer.checkout_position is not None:
