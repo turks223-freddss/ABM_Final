@@ -193,6 +193,7 @@ def legend_item(label: str, color: str, border: str = "#64748b", shape: str = "s
 @solara.component
 def InteractiveStoreView(model: StoreModel):
     selected_id, set_selected_id = solara.use_state("none:")
+    show_live_metrics, set_show_live_metrics = solara.use_state(False)
 
     def select(kind, key):
         def handler():
@@ -204,9 +205,23 @@ def InteractiveStoreView(model: StoreModel):
         gap="12px",
         children=[
             StoreGrid(model, selected_id, select),
-            SelectionPanel(model, selected_id),
+            PageZeroStatusPanel(model, selected_id, show_live_metrics, set_show_live_metrics),
         ],
     )
+
+
+@solara.component
+def PageZeroStatusPanel(model: StoreModel, selected_id: str, show_live_metrics: bool, set_show_live_metrics):
+    with solara.Column(gap="8px", style="min-width:300px; max-width:380px;"):
+        solara.Switch(
+            label="Show Live Metrics",
+            value=show_live_metrics,
+            on_value=set_show_live_metrics,
+        )
+        if show_live_metrics:
+            LiveMetrics(model)
+        else:
+            SelectionPanel(model, selected_id)
 
 
 @solara.component
@@ -1025,7 +1040,6 @@ page = mesa_solara_viz.SolaraViz(
     model,
     components=[
         (InteractiveStoreView, 0),
-        (LiveMetrics, 0),
         (ShoppingListCompletionFigure, 1),
         (PlannedVsUnplannedFigure, 1),
         (ShopperTypeOutcomeFigure, 2),

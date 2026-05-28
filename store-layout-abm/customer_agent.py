@@ -28,7 +28,7 @@ SHOPPER_PROFILES = {
         exploration_rate=0.03,
         patience=90,
         discount_awareness=0.20,
-        exposure_radius=1,
+        exposure_radius=2,
     ),
     "bargain_hunter": ShopperProfile(
         name="Bargain Hunter",
@@ -37,7 +37,7 @@ SHOPPER_PROFILES = {
         exploration_rate=0.12,
         patience=125,
         discount_awareness=0.85,
-        exposure_radius=1,
+        exposure_radius=2,
     ),
     "impulse_buyer": ShopperProfile(
         name="Impulse Buyer",
@@ -55,7 +55,7 @@ SHOPPER_PROFILES = {
         exploration_rate=0.04,
         patience=105,
         discount_awareness=0.35,
-        exposure_radius=1,
+        exposure_radius=2,
     ),
     "browser": ShopperProfile(
         name="Browser",

@@ -803,13 +803,28 @@ class StoreModel(Model):
             customer.checkout_position = self.choose_checkout_position(customer.pos)
 
         checkout_pos = customer.checkout_position
+        forward_step = self.checkout_forward_step_for(customer)
+        if forward_step is not None:
+            return forward_step
+        return self.checkout_entry_cell(checkout_pos)
+
+    def checkout_forward_step_for(self, customer: CustomerAgent) -> Optional[Position]:
+        queue_checkout = self.layout.checkout_for_queue_cell(customer.pos)
+        if queue_checkout is not None and customer.checkout_position != queue_checkout:
+            customer.checkout_position = queue_checkout
+
+        checkout_pos = customer.checkout_position
+        if checkout_pos not in self.layout.checkout_positions:
+            return None
+
         lane = self.layout.checkout_queue_cells.get(checkout_pos, [])
         if customer.pos == checkout_pos:
             return checkout_pos
-        if customer.pos in lane:
-            lane_index = lane.index(customer.pos)
-            return checkout_pos if lane_index == 0 else lane[lane_index - 1]
-        return self.checkout_entry_cell(checkout_pos)
+        if customer.pos not in lane:
+            return None
+
+        lane_index = lane.index(customer.pos)
+        return checkout_pos if lane_index == 0 else lane[lane_index - 1]
 
     def count_customers_near(self, pos, radius: int = 1, include_self: bool = True) -> int:
         nearby_agents = self.grid.get_neighbors(
@@ -875,6 +890,15 @@ class StoreModel(Model):
         if getattr(customer, "following_loop_entry_route", False):
             if self.can_enter_tile(preferred_step, mover=customer):
                 return preferred_step
+            return customer.pos
+
+        checkout_forward_step = self.checkout_forward_step_for(customer)
+        if checkout_forward_step is not None:
+            if checkout_forward_step != customer.pos and self.can_enter_tile(
+                checkout_forward_step,
+                mover=customer,
+            ):
+                return checkout_forward_step
             return customer.pos
 
         options = self.layout.neighbors(customer.pos)
