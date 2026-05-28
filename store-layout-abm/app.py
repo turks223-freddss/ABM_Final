@@ -502,6 +502,7 @@ def SelectionPanel(model: StoreModel, selected_id: str):
 | Cashier position | {detail["position"]} |
 | Speed | {detail["speed"]} |
 | Service time | {detail["service_minutes"]:.2f} min/shopper |
+| Speed mode | Fixed |
 | Queue length | {detail["queue_length"]} |
 | Queue cells | {", ".join(str(cell) for cell in detail["queue_cells"])} |
 | Nearby checkout items | {", ".join(nearby_checkout_items) or "None"} |
@@ -699,22 +700,26 @@ def LiveMetrics(model: StoreModel):
 | Target traffic share | {summary["traffic_share"]:.0%} |
 | Target active shoppers | {summary["target_active_shoppers"]} |
 | Cashiers | {summary["cashiers"]} |
+| Cashier speed | {summary["cashier_service_mode"].title()} ({summary["fixed_cashier_service_minutes"]:.1f} min/shopper) |
 | Sale items | {summary["sale_items"]} |
 | Avg. sale discount | {summary["avg_sale_discount_percentage"]:.1f}% |
 | Shopping list max setting | {summary["shopping_list_max_setting"] or "Profile default"} |
 | Patience threshold | {summary["patience_threshold_percentage"]:.0f}% |
+| Browser time limit | {summary["browser_time_limit_minutes"]:.0f} minutes |
 | Finished shoppers | {summary["finished_shoppers"]} / {summary["shoppers"]} |
 | Heading to checkout | {summary["checkout_bound_shoppers"]} |
 | Abandoned shoppers | {summary["abandoned_shoppers"]} / {summary["shoppers"]} |
 | Shoppers with shopping lists | {summary["shoppers_with_shopping_lists"]} / {summary["shoppers"]} |
 | Completed shopping lists | {completed_lists} |
 | Not completed shopping lists | {summary["incomplete_shopping_lists"]} |
+| Items not found | {summary["items_not_found"]} |
 | Abandoned: time | {summary["abandoned_due_to_time"]} |
 | Abandoned: traffic | {summary["abandoned_due_to_traffic"]} |
 | Abandoned: congestion | {summary["abandoned_due_to_congestion"]} |
 | Abandoned: checkout | {summary["abandoned_due_to_checkout"]} |
 | Crowded tiles | {summary["crowded_tiles"]} |
 | Tile capacity blocks | {summary["tile_capacity_blocks"]} |
+| Blocked congestion frequency | {summary["congestion_block_frequency"]} / step |
 | Waiting to arrive | {summary["waiting_shoppers"]} |
 | Unique shopping lists | {summary["unique_shopping_lists"]} / {summary["shoppers"]} |
 | Trip completion rate | {summary["completion_rate"]:.0%} |
@@ -725,6 +730,7 @@ def LiveMetrics(model: StoreModel):
 | Avg. checkout wait | {summary["avg_checkout_wait"]} minutes |
 | Longest checkout queue | {summary["longest_checkout_queue"]} shoppers |
 | Avg. patience remaining | {summary["avg_patience_remaining"]} minutes |
+| Avg. patience drop | {summary["avg_patience_drop"]} minutes |
 | Avg. items per shopper | {summary["avg_items_per_shopper"]} |
 | Planned purchases | {summary["planned_purchases"]} |
 | Unplanned purchases | {summary["unplanned_purchases"]} |
@@ -854,6 +860,274 @@ def ShopperTypeOutcomeFigure(model: StoreModel):
             model.finished_shopper_count,
             model.abandoned_shopper_count,
         ],
+    )
+
+
+@solara.component
+def CongestionPatienceFigure(model: StoreModel):
+    update_counter.get()
+    model_df = model.datacollector.get_model_vars_dataframe()
+
+    fig = Figure(figsize=(8.2, 3.8), dpi=110)
+    ax1 = fig.subplots()
+    ax2 = ax1.twinx()
+
+    if model_df.empty:
+        steps = [model.step_count]
+        blocked = [model.tile_capacity_blocks]
+        blocked_frequency = [model.congestion_block_frequency]
+        patience_remaining = [model.avg_patience_remaining]
+        patience_drop = [model.avg_patience_drop]
+    else:
+        def column_values(name: str):
+            return model_df[name].tolist() if name in model_df else []
+
+        steps = model_df["step"].tolist()
+        blocked = column_values("tile_capacity_blocks")
+        blocked_frequency = column_values("congestion_block_frequency")
+        patience_remaining = column_values("avg_patience_remaining")
+        patience_drop = column_values("avg_patience_drop")
+
+    if blocked:
+        ax1.plot(steps, blocked, color="#b91c1c", label="Blocked moves")
+    if blocked_frequency:
+        ax1.plot(
+            steps,
+            blocked_frequency,
+            color="#78350f",
+            linestyle="--",
+            label="Blocked frequency",
+        )
+    if patience_remaining:
+        ax2.plot(
+            steps,
+            patience_remaining,
+            color="#16a34a",
+            linestyle="-",
+            label="Avg. patience remaining",
+        )
+    if patience_drop:
+        ax2.plot(
+            steps,
+            patience_drop,
+            color="#0f766e",
+            linestyle=":",
+            label="Avg. patience drop",
+        )
+
+    ax1.set_title("Blocked congestion and patience over time")
+    ax1.set_xlabel("Simulation step")
+    ax1.set_ylabel("Blocked moves / frequency")
+    ax2.set_ylabel("Minutes")
+    lines, labels = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines + lines2, labels + labels2, loc="best", fontsize=8, frameon=False)
+    fig.tight_layout()
+    solara.FigureMatplotlib(
+        fig,
+        format="png",
+        bbox_inches="tight",
+        dependencies=[
+            model.step_count,
+            model.tile_capacity_blocks,
+            round(model.avg_patience_drop, 2),
+        ],
+    )
+
+
+@solara.component
+def ShopperTypeUnplannedFigure(model: StoreModel):
+    update_counter.get()
+    rows = model.shopper_type_summary()
+    labels = [row["profile_name"] for row in rows]
+    values = [row["unplanned_purchases"] for row in rows]
+    x_positions = list(range(len(labels)))
+
+    fig = Figure(figsize=(8.2, 3.8), dpi=110)
+    ax = fig.subplots()
+    bars = ax.bar(x_positions, values, color=[SHOPPER_COLORS[row["shopper_type"]] for row in rows])
+    ax.set_title("Unplanned purchases by shopper type")
+    ax.set_ylabel("Items")
+    ax.set_xticks(list(range(len(labels))))
+    ax.set_xticklabels(labels, rotation=20, ha="right")
+    ax.set_ylim(0, max(1, *values) * 1.18)
+    label_bars(ax, bars)
+    fig.tight_layout()
+    solara.FigureMatplotlib(
+        fig,
+        format="png",
+        bbox_inches="tight",
+        dependencies=[model.step_count, model.unplanned_purchase_count],
+    )
+
+
+@solara.component
+def ShopperTypeCompletionTimeFigure(model: StoreModel):
+    update_counter.get()
+    rows = model.shopper_type_summary()
+    labels = [row["profile_name"] for row in rows]
+    values = [row["avg_completion_minutes"] for row in rows]
+    x_positions = list(range(len(labels)))
+
+    fig = Figure(figsize=(8.2, 3.8), dpi=110)
+    ax = fig.subplots()
+    bars = ax.bar(x_positions, values, color=[SHOPPER_COLORS[row["shopper_type"]] for row in rows])
+    ax.set_title("Average completion time by shopper type")
+    ax.set_ylabel("Minutes")
+    ax.set_xticks(list(range(len(labels))))
+    ax.set_xticklabels(labels, rotation=20, ha="right")
+    ax.set_ylim(0, max(1, *values) * 1.18)
+    label_bars(ax, bars)
+    fig.tight_layout()
+    solara.FigureMatplotlib(
+        fig,
+        format="png",
+        bbox_inches="tight",
+        dependencies=[model.step_count, round(model.avg_completion_minutes, 2)],
+    )
+
+
+@solara.component
+def StoreTrafficHeatmapFigure(model: StoreModel):
+    update_counter.get()
+    heatmap = model.traffic_heatmap()
+    max_visits = max(1, int(heatmap.max()))
+
+    fig = Figure(figsize=(8.8, 6.2), dpi=110)
+    ax = fig.subplots()
+    image = ax.imshow(
+        heatmap,
+        origin="lower",
+        cmap="YlOrRd",
+        vmin=0,
+        vmax=max_visits,
+        alpha=0.88,
+    )
+
+    for x in range(model.width):
+        for y in range(model.height):
+            ax.add_patch(
+                Rectangle(
+                    (x - 0.5, y - 0.5),
+                    1,
+                    1,
+                    facecolor="none",
+                    edgecolor="#cbd5e1",
+                    linewidth=0.22,
+                    alpha=0.5,
+                )
+            )
+
+    for x, y in model.layout.wall_cells:
+        ax.add_patch(
+            Rectangle(
+                (x - 0.5, y - 0.5),
+                1,
+                1,
+                facecolor="#111827",
+                edgecolor="#020617",
+                linewidth=0.45,
+                alpha=0.92,
+            )
+        )
+
+    for pos, category in model.layout.shelf_categories.items():
+        if pos in model.layout.wall_cells:
+            continue
+        x, y = pos
+        ax.add_patch(
+            Rectangle(
+                (x - 0.5, y - 0.5),
+                1,
+                1,
+                facecolor=CATEGORY_COLORS.get(category, "#94a3b8"),
+                edgecolor="#111827",
+                linewidth=0.35,
+                alpha=0.26,
+            )
+        )
+
+    for x, y in model.layout.all_checkout_queue_cells:
+        ax.text(x, y, "Q", ha="center", va="center", fontsize=6.5, weight="bold", color="#1d4ed8")
+
+    for x, y in model.layout.entrance_positions:
+        ax.scatter([x], [y], c="#bbf7d0", s=95, marker="s", edgecolors="#16a34a", linewidths=0.8, zorder=4)
+        ax.text(x, y, "E", ha="center", va="center", fontsize=8, weight="bold", zorder=5)
+
+    for x, y in model.layout.checkout_positions:
+        ax.scatter([x], [y], c="#fecaca", s=95, marker="s", edgecolors="#dc2626", linewidths=0.8, zorder=4)
+        ax.text(x, y, "C", ha="center", va="center", fontsize=8, weight="bold", zorder=5)
+
+    ax.set_title(
+        f"Store traffic heatmap: {model.layout_name.replace('_', ' ').title()}",
+        fontsize=12,
+        pad=10,
+    )
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_xlim(-0.5, model.width - 0.5)
+    ax.set_ylim(-0.5, model.height - 0.5)
+    ax.set_aspect("equal")
+    fig.colorbar(image, ax=ax, label="Tile visits", shrink=0.78)
+    fig.tight_layout()
+    solara.FigureMatplotlib(
+        fig,
+        format="png",
+        bbox_inches="tight",
+        dependencies=[
+            model.step_count,
+            model.layout_name,
+            model.num_shoppers,
+            model.num_cashiers,
+        ],
+    )
+
+
+@solara.component
+def ShopperTypeHeatmapFigure(model: StoreModel):
+    update_counter.get()
+    heatmaps = model.traffic_heatmap_by_shopper_type()
+    max_visits = max(int(heatmap.max()) for heatmap in heatmaps.values()) if heatmaps else 1
+    max_visits = max(1, max_visits)
+
+    fig = Figure(figsize=(9.2, 6.2), dpi=110)
+    axes = fig.subplots(2, 3)
+    flat_axes = axes.flatten()
+    image = None
+
+    for axis, (shopper_type, profile) in zip(flat_axes, SHOPPER_PROFILES.items()):
+        heatmap = heatmaps[shopper_type]
+        image = axis.imshow(heatmap, origin="lower", cmap="YlOrRd", vmin=0, vmax=max_visits)
+        if model.layout.entrance_positions:
+            axis.scatter(
+                [pos[0] for pos in model.layout.entrance_positions],
+                [pos[1] for pos in model.layout.entrance_positions],
+                c="white",
+                s=18,
+                edgecolors="#111827",
+                linewidths=0.4,
+            )
+        if model.layout.checkout_positions:
+            axis.scatter(
+                [pos[0] for pos in model.layout.checkout_positions],
+                [pos[1] for pos in model.layout.checkout_positions],
+                c="#111827",
+                s=18,
+            )
+        axis.set_title(profile.name, fontsize=9)
+        axis.set_xticks([])
+        axis.set_yticks([])
+
+    for axis in flat_axes[len(SHOPPER_PROFILES):]:
+        axis.axis("off")
+    if image is not None:
+        fig.colorbar(image, ax=flat_axes.tolist(), label="Tile visits", shrink=0.72)
+    fig.suptitle("Tile heatmap by shopper type", fontsize=12)
+    solara.FigureMatplotlib(
+        fig,
+        format="png",
+        bbox_inches="tight",
+        dependencies=[model.step_count, model.layout_name, model.num_shoppers],
     )
 
 
@@ -1080,7 +1354,12 @@ page = mesa_solara_viz.SolaraViz(
         (InteractiveStoreView, 0),
         (ShoppingListCompletionFigure, 1),
         (PlannedVsUnplannedFigure, 1),
+        (CongestionPatienceFigure, 1),
         (ShopperTypeOutcomeFigure, 2),
+        (ShopperTypeUnplannedFigure, 2),
+        (ShopperTypeCompletionTimeFigure, 2),
+        (StoreTrafficHeatmapFigure, 3),
+        (ShopperTypeHeatmapFigure, 3),
         make_plot_component(
             {
                 "active_shoppers": "tab:red",
@@ -1097,6 +1376,14 @@ page = mesa_solara_viz.SolaraViz(
                 "unplanned_purchases": "tab:orange",
             },
             page=2,
+        ),
+        make_plot_component(
+            {
+                "items_not_found": "tab:gray",
+                "tile_capacity_blocks": "tab:red",
+                "avg_patience_drop": "tab:green",
+            },
+            page=3,
         ),
     ],
     model_params=model_params,

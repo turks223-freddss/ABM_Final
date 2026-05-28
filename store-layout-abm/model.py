@@ -45,6 +45,7 @@ class StoreModel(Model):
 
     TILE_COMFORT_CAPACITY = 2
     TILE_MAX_CAPACITY = 4
+    FIXED_CASHIER_SERVICE_MINUTES = 3.0
 
     def __init__(
         self,
@@ -153,7 +154,7 @@ class StoreModel(Model):
             sale_discount_max=self.sale_discount_max,
         )
         self.cashier_service_minutes: Dict[Position, float] = {
-            checkout_pos: round(self.random.uniform(1.8, 4.2), 2)
+            checkout_pos: self.FIXED_CASHIER_SERVICE_MINUTES
             for checkout_pos in self.layout.checkout_positions
         }
         self.customers: List[CustomerAgent] = []
@@ -210,12 +211,17 @@ class StoreModel(Model):
                 "active_shoppers": lambda m: m.active_shopper_count,
                 "crowded_tiles": lambda m: m.crowded_tile_count,
                 "tile_capacity_blocks": lambda m: m.tile_capacity_blocks,
+                "congestion_block_frequency": lambda m: round(
+                    m.congestion_block_frequency,
+                    3,
+                ),
                 "arrived_shoppers": lambda m: m.arrived_shopper_count,
                 "waiting_shoppers": lambda m: m.waiting_shopper_count,
                 "finished_shoppers": lambda m: m.finished_shopper_count,
                 "abandoned_shoppers": lambda m: m.abandoned_shopper_count,
                 "completed_shopping_lists": lambda m: m.completed_shopping_list_count,
                 "incomplete_shopping_lists": lambda m: m.incomplete_shopping_list_count,
+                "items_not_found": lambda m: m.items_not_found_count,
                 "checkout_queue": lambda m: m.checkout_queue_length,
                 "revenue": lambda m: round(m.total_revenue, 2),
                 "profit": lambda m: round(m.total_profit, 2),
@@ -244,6 +250,7 @@ class StoreModel(Model):
                 "avg_basket_profit": lambda m: round(m.avg_basket_profit, 2),
                 "avg_items_per_shopper": lambda m: round(m.avg_items_per_shopper, 2),
                 "avg_patience_remaining": lambda m: round(m.avg_patience_remaining, 2),
+                "avg_patience_drop": lambda m: round(m.avg_patience_drop, 2),
                 "avg_patience_lost_to_congestion": lambda m: round(
                     m.avg_patience_lost_to_congestion,
                     2,
@@ -823,6 +830,8 @@ class StoreModel(Model):
 
     def cashier_service_label(self, checkout_pos: Position) -> str:
         service_minutes = self.cashier_service_minutes.get(checkout_pos, 0.0)
+        if service_minutes == self.FIXED_CASHIER_SERVICE_MINUTES:
+            return "fixed"
         if service_minutes <= 2.4:
             return "fast"
         if service_minutes <= 3.4:
@@ -1031,6 +1040,10 @@ class StoreModel(Model):
         self.tile_crowding_patience_loss += amount
 
     @property
+    def congestion_block_frequency(self) -> float:
+        return self.tile_capacity_blocks / max(1, self.step_count)
+
+    @property
     def crowded_tile_count(self) -> int:
         occupied_positions = {
             customer.pos
@@ -1230,8 +1243,27 @@ class StoreModel(Model):
         return mean(customer.patience_level for customer in self.customers)
 
     @property
+    def avg_patience_drop(self) -> float:
+        return mean(
+            max(0.0, customer.max_patience - customer.patience_level)
+            for customer in self.customers
+        )
+
+    @property
     def avg_patience_lost_to_congestion(self) -> float:
         return mean(customer.patience_lost_to_congestion for customer in self.customers)
+
+    @property
+    def items_not_found_count(self) -> int:
+        total = 0
+        for customer in self.customers:
+            if not customer.shopping_list:
+                continue
+            if customer.completed:
+                total += len(getattr(customer, "not_found_items", []))
+            else:
+                total += len(customer.remaining_items)
+        return total
 
     @property
     def unique_shopping_list_count(self) -> int:
@@ -1273,6 +1305,17 @@ class StoreModel(Model):
                 heatmap[y, x] += 1
         return heatmap
 
+    def traffic_heatmap_by_shopper_type(self) -> Dict[str, np.ndarray]:
+        heatmaps = {
+            shopper_type: np.zeros((self.height, self.width), dtype=int)
+            for shopper_type in SHOPPER_PROFILES
+        }
+        for customer in self.customers:
+            heatmap = heatmaps[customer.shopper_type]
+            for x, y in customer.path_history:
+                heatmap[y, x] += 1
+        return heatmaps
+
     def summary(self) -> Dict[str, float]:
         completion_rate = self.finished_shopper_count / self.num_shoppers
         abandonment_rate = self.abandoned_shopper_count / self.num_shoppers
@@ -1297,6 +1340,9 @@ class StoreModel(Model):
             ),
             "patience_threshold": round(self.patience_threshold, 3),
             "patience_threshold_percentage": round(self.patience_threshold * 100, 1),
+            "browser_time_limit_minutes": CustomerAgent.BROWSER_TIME_LIMIT_MINUTES,
+            "cashier_service_mode": "fixed",
+            "fixed_cashier_service_minutes": self.FIXED_CASHIER_SERVICE_MINUTES,
             "avg_cashier_service_minutes": round(
                 mean(self.cashier_service_minutes.values()),
                 2,
@@ -1327,8 +1373,10 @@ class StoreModel(Model):
             "abandoned_shoppers": self.abandoned_shopper_count,
             "completed_shopping_lists": self.completed_shopping_list_count,
             "incomplete_shopping_lists": self.incomplete_shopping_list_count,
+            "items_not_found": self.items_not_found_count,
             "crowded_tiles": self.crowded_tile_count,
             "tile_capacity_blocks": self.tile_capacity_blocks,
+            "congestion_block_frequency": round(self.congestion_block_frequency, 3),
             "completion_rate": round(completion_rate, 3),
             "abandonment_rate": round(abandonment_rate, 3),
             "abandoned_due_to_time": self.abandonment_reason_counts.get("time", 0),
@@ -1364,6 +1412,7 @@ class StoreModel(Model):
             "avg_profit_per_customer": round(self.avg_profit_per_customer, 2),
             "avg_congestion_delay": round(self.avg_congestion_delay, 2),
             "avg_patience_remaining": round(self.avg_patience_remaining, 2),
+            "avg_patience_drop": round(self.avg_patience_drop, 2),
             "avg_patience_lost_to_congestion": round(
                 self.avg_patience_lost_to_congestion,
                 2,
@@ -1465,6 +1514,17 @@ class StoreModel(Model):
 
             finished = [customer for customer in shoppers if customer.state == "finished"]
             abandoned = [customer for customer in shoppers if customer.abandoned]
+            unplanned_purchases = sum(
+                len(customer.impulse_purchases)
+                for customer in shoppers
+            )
+            items_not_found = sum(
+                len(getattr(customer, "not_found_items", []))
+                if customer.completed
+                else len(customer.remaining_items)
+                for customer in shoppers
+                if customer.shopping_list
+            )
             rows.append(
                 {
                     "shopper_type": shopper_type,
@@ -1475,6 +1535,12 @@ class StoreModel(Model):
                     "abandonment_rate": round(len(abandoned) / len(shoppers), 3),
                     "avg_completion_time": round(
                         mean(customer.completion_time for customer in finished),
+                        2,
+                    )
+                    if finished
+                    else 0.0,
+                    "avg_completion_minutes": round(
+                        mean(customer.completion_minutes or 0.0 for customer in finished),
                         2,
                     )
                     if finished
@@ -1501,6 +1567,20 @@ class StoreModel(Model):
                     ),
                     "avg_unlisted_purchases": round(
                         mean(len(customer.unlisted_purchases) for customer in shoppers),
+                        2,
+                    ),
+                    "unplanned_purchases": unplanned_purchases,
+                    "avg_unplanned_purchases": round(
+                        unplanned_purchases / len(shoppers),
+                        2,
+                    ),
+                    "items_not_found": items_not_found,
+                    "avg_items_not_found": round(items_not_found / len(shoppers), 2),
+                    "avg_patience_drop": round(
+                        mean(
+                            max(0.0, customer.max_patience - customer.patience_level)
+                            for customer in shoppers
+                        ),
                         2,
                     ),
                     "lost_revenue_from_abandonment": round(
@@ -1535,7 +1615,18 @@ class StoreModel(Model):
                 "checkout_wait": customer.checkout_wait_initial,
                 "checkout_wait_minutes": customer.checkout_wait_initial_minutes,
                 "checkout_time_spent": customer.checkout_time_spent,
+                "completion_minutes": customer.completion_minutes or 0.0,
                 "abandoned": customer.abandoned,
+                "not_found_item_count": (
+                    len(getattr(customer, "not_found_items", []))
+                    if customer.completed
+                    else len(customer.remaining_items)
+                ),
+                "not_found_items": ", ".join(
+                    getattr(customer, "not_found_items", [])
+                    if customer.completed
+                    else customer.remaining_items
+                ),
                 "abandoned_item_count": len(customer.abandoned_items),
                 "abandoned_items": ", ".join(customer.abandoned_items),
                 "abandoned_value": round(customer.abandoned_value, 2),

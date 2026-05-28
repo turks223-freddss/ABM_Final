@@ -82,6 +82,7 @@ class CustomerAgent(Agent):
     LOW_PATIENCE_CHECKOUT_THRESHOLD = 0.40
     QUEUE_PATIENCE_COST_MULTIPLIER = 0.55
     SEEN_ITEM_NOTICE_MULTIPLIER = 0.30
+    BROWSER_TIME_LIMIT_MINUTES = 180.0
 
     def __init__(
         self,
@@ -101,6 +102,7 @@ class CustomerAgent(Agent):
         self.shopping_list = list(shopping_list)
         self.shopping_list_names = set(shopping_list)
         self.remaining_items = list(shopping_list)
+        self.not_found_items: List[str] = []
         self.abandoned_items: List[str] = []
         self.max_patience = float(self.profile.patience)
         self.patience_level = self.max_patience
@@ -169,6 +171,13 @@ class CustomerAgent(Agent):
             return
 
         self.time_spent += 1
+        if (
+            self.shopper_type == "browser"
+            and self.state == "shopping"
+            and self.time_spent * self.model.minutes_per_step
+            >= self.BROWSER_TIME_LIMIT_MINUTES
+        ):
+            self.force_checkout = True
         if self.model.checkout_cutoff_active and self.state == "shopping":
             self.force_checkout = True
         if self.state == "shopping" and self.patience_ratio < self.patience_checkout_threshold:
@@ -268,6 +277,7 @@ class CustomerAgent(Agent):
         self.state = "abandoned"
         self.abandonment_time = self.time_spent
         self.abandonment_reason = reason
+        self.not_found_items = list(dict.fromkeys(self.remaining_items))
         abandoned_names = list(dict.fromkeys(
             list(self.remaining_items) + [item.name for item, _, _ in self.basket_records]
         ))
@@ -539,6 +549,7 @@ class CustomerAgent(Agent):
         self.checkout_time_spent += 1
         self.checkout_wait -= 1
         if self.checkout_wait <= 0:
+            self.not_found_items = list(dict.fromkeys(self.remaining_items))
             for item, planned, on_shopping_list in self.basket_records:
                 self.model.record_purchase(
                     item,

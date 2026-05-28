@@ -297,6 +297,7 @@ def summarize_daily_records(daily_summary_df: pd.DataFrame) -> dict:
         "unlisted_purchases",
         "abandoned_shoppers",
         "abandoned_list_items",
+        "items_not_found",
         "abandoned_due_to_time",
         "abandoned_due_to_traffic",
         "abandoned_due_to_congestion",
@@ -414,6 +415,10 @@ def run_experiment(
 
     if make_plots:
         plot_layout_comparison(aggregate, output_path / "layout_comparison.png")
+        plot_layout_design_metrics(
+            aggregate,
+            output_path / "layout_design_comparison.png",
+        )
         plot_profit_abandonment_scatter(
             aggregate,
             output_path / "profit_vs_abandonment.png",
@@ -450,9 +455,13 @@ def aggregate_results(results: pd.DataFrame) -> pd.DataFrame:
         "avg_checkout_wait",
         "max_checkout_wait",
         "longest_checkout_queue",
+        "planned_purchases",
+        "impulse_purchases",
+        "unplanned_purchases",
         "avg_impulse_per_customer",
         "avg_unlisted_per_customer",
         "unlisted_purchases",
+        "items_not_found",
         "abandoned_shoppers",
         "abandoned_list_items",
         "lost_revenue_from_abandonment",
@@ -466,7 +475,9 @@ def aggregate_results(results: pd.DataFrame) -> pd.DataFrame:
         "avg_revenue_per_customer",
         "avg_profit_per_customer",
         "avg_congestion_delay",
+        "congestion_block_frequency",
         "avg_patience_remaining",
+        "avg_patience_drop",
         "avg_patience_lost_to_congestion",
         "layout_score",
     ]
@@ -546,7 +557,10 @@ def plot_behavior_timeseries(model_df: pd.DataFrame, path: Path) -> None:
         "target_active_shoppers",
         "abandoned_shoppers",
         "checkout_queue",
+        "tile_capacity_blocks",
+        "congestion_block_frequency",
         "avg_patience_remaining",
+        "avg_patience_drop",
         "avg_congestion_delay",
     ]
     available_columns = [column for column in columns if column in model_df.columns]
@@ -572,6 +586,14 @@ def plot_behavior_timeseries(model_df: pd.DataFrame, path: Path) -> None:
         ax1.plot(plot_df["step"], plot_df["abandoned_shoppers"], label="Abandoned", color="#dc2626")
     if "checkout_queue" in plot_df:
         ax1.plot(plot_df["step"], plot_df["checkout_queue"], label="Checkout queue", color="#7c3aed")
+    if "tile_capacity_blocks" in plot_df:
+        ax1.plot(
+            plot_df["step"],
+            plot_df["tile_capacity_blocks"],
+            label="Blocked moves",
+            color="#b91c1c",
+            linestyle=":",
+        )
     ax1.set_xlabel("Simulation step")
     ax1.set_ylabel("Shoppers")
 
@@ -584,6 +606,14 @@ def plot_behavior_timeseries(model_df: pd.DataFrame, path: Path) -> None:
             color="#16a34a",
             linestyle="--",
         )
+    if "avg_patience_drop" in plot_df:
+        ax2.plot(
+            plot_df["step"],
+            plot_df["avg_patience_drop"],
+            label="Avg. patience drop",
+            color="#0f766e",
+            linestyle="-.",
+        )
     if "avg_congestion_delay" in plot_df:
         ax2.plot(
             plot_df["step"],
@@ -592,7 +622,15 @@ def plot_behavior_timeseries(model_df: pd.DataFrame, path: Path) -> None:
             color="#f97316",
             linestyle=":",
         )
-    ax2.set_ylabel("Steps")
+    if "congestion_block_frequency" in plot_df:
+        ax2.plot(
+            plot_df["step"],
+            plot_df["congestion_block_frequency"],
+            label="Blocked frequency",
+            color="#78350f",
+            linestyle="--",
+        )
+    ax2.set_ylabel("Minutes / steps / frequency")
 
     lines, labels = ax1.get_legend_handles_labels()
     lines2, labels2 = ax2.get_legend_handles_labels()
@@ -611,6 +649,7 @@ def plot_purchase_mix(summary: dict, path: Path) -> None:
         "Planned": summary.get("planned_purchases", 0),
         "Impulse": summary.get("impulse_purchases", 0),
         "Unlisted": summary.get("unlisted_purchases", 0),
+        "Not found": summary.get("items_not_found", 0),
         "Abandoned list": summary.get("abandoned_list_items", 0),
     }
     profit_metrics = {
@@ -620,7 +659,11 @@ def plot_purchase_mix(summary: dict, path: Path) -> None:
     }
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4))
-    axes[0].bar(count_metrics.keys(), count_metrics.values(), color=["#2563eb", "#f97316", "#dc2626", "#64748b"])
+    axes[0].bar(
+        count_metrics.keys(),
+        count_metrics.values(),
+        color=["#2563eb", "#f97316", "#0f766e", "#64748b", "#dc2626"],
+    )
     axes[0].set_title("Purchase and abandonment counts")
     axes[0].set_ylabel("Items")
     axes[0].tick_params(axis="x", rotation=20)
@@ -685,7 +728,8 @@ def plot_shopper_type_performance(shopper_type_df: pd.DataFrame, path: Path) -> 
     plot_df = average_numeric_by(shopper_type_df, "shopper_type")
     plot_df = plot_df.sort_values("avg_basket_profit", ascending=False)
 
-    fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+    axes = axes.flatten()
     axes[0].bar(plot_df["shopper_type"], plot_df["avg_basket_profit"], color="#16a34a")
     axes[0].set_title("Avg. basket profit by shopper type")
     axes[0].set_ylabel("Dollars")
@@ -695,6 +739,22 @@ def plot_shopper_type_performance(shopper_type_df: pd.DataFrame, path: Path) -> 
     axes[1].set_title("Abandonment rate by shopper type")
     axes[1].set_ylabel("Rate")
     axes[1].tick_params(axis="x", rotation=25)
+
+    if "unplanned_purchases" in plot_df:
+        axes[2].bar(plot_df["shopper_type"], plot_df["unplanned_purchases"], color="#f97316")
+        axes[2].set_title("Unplanned purchases by shopper type")
+        axes[2].set_ylabel("Items")
+        axes[2].tick_params(axis="x", rotation=25)
+    else:
+        axes[2].axis("off")
+
+    if "avg_completion_minutes" in plot_df:
+        axes[3].bar(plot_df["shopper_type"], plot_df["avg_completion_minutes"], color="#2563eb")
+        axes[3].set_title("Avg. completion time by shopper type")
+        axes[3].set_ylabel("Minutes")
+        axes[3].tick_params(axis="x", rotation=25)
+    else:
+        axes[3].axis("off")
 
     fig.tight_layout()
     fig.savefig(path, dpi=150)
@@ -758,11 +818,11 @@ def plot_layout_comparison(aggregate: pd.DataFrame, path: Path) -> None:
     import matplotlib.pyplot as plt
 
     metrics = [
-        "profit",
+        "avg_completion_minutes",
+        "unplanned_purchases",
+        "avg_patience_remaining",
         "completion_rate",
         "abandonment_rate",
-        "lost_profit_from_abandonment",
-        "avg_checkout_wait",
         "layout_score",
     ]
     metrics = [metric for metric in metrics if metric in aggregate.columns]
@@ -781,6 +841,38 @@ def plot_layout_comparison(aggregate: pd.DataFrame, path: Path) -> None:
         axis.axis("off")
 
     axes[0].legend(loc="best")
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+
+
+def plot_layout_design_metrics(aggregate: pd.DataFrame, path: Path) -> None:
+    metrics = [
+        ("avg_completion_minutes", "Avg completion time", "Minutes"),
+        ("unplanned_purchases", "Unplanned purchases", "Items"),
+        ("avg_patience_remaining", "Avg patience remaining", "Minutes"),
+    ]
+    metrics = [metric for metric in metrics if metric[0] in aggregate.columns]
+    if not metrics:
+        return
+
+    prepare_matplotlib(path.parent)
+    import matplotlib.pyplot as plt
+
+    fig, axes = plt.subplots(1, len(metrics), figsize=(5 * len(metrics), 4.5))
+    if len(metrics) == 1:
+        axes = [axes]
+
+    for axis, (column, title, ylabel) in zip(axes, metrics):
+        for layout in aggregate["layout"].unique():
+            subset = aggregate[aggregate["layout"] == layout]
+            axis.plot(subset["shoppers"], subset[column], marker="o", label=layout)
+        axis.set_xlabel("Shopper count")
+        axis.set_title(title)
+        axis.set_ylabel(ylabel)
+
+    axes[0].legend(loc="best")
+    fig.suptitle("Layout design comparison")
     fig.tight_layout()
     fig.savefig(path, dpi=150)
     plt.close(fig)
