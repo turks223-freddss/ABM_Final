@@ -57,28 +57,52 @@ def css_cell_style(
     color: str = "#111827",
     border: str = "#d1d5db",
     selected: bool = False,
+    selected_shopper: bool = False,
 ) -> str:
-    outline = "2px solid #111827" if selected else "0 solid transparent"
+    if selected_shopper:
+        outline = "3px solid #f59e0b"
+        outline_offset = "-3px"
+        box_shadow = "0 0 0 2px #fff7ed, 0 0 12px rgba(245,158,11,0.85)"
+    elif selected:
+        outline = "2px solid #111827"
+        outline_offset = "-2px"
+        box_shadow = "none"
+    else:
+        outline = "0 solid transparent"
+        outline_offset = "-2px"
+        box_shadow = "none"
     return (
         "width:22px; min-width:22px; height:22px; min-height:22px; "
         "padding:0; margin:0; border-radius:2px; "
         f"border:1px solid {border}; background:{background}; color:{color}; "
         "font-size:9px; line-height:1; text-transform:none; "
-        f"outline:{outline}; outline-offset:-2px;"
+        f"outline:{outline}; outline-offset:{outline_offset}; box-shadow:{box_shadow};"
     )
 
 
-def shopper_circle_background(background: str, customers) -> str:
+def shopper_circle_background(background: str, customers, selected_shopper_id: int | None = None) -> str:
     if not customers:
         return background
 
-    visible_customers = customers[:4]
+    selected_customers = [
+        customer for customer in customers if customer.uid == selected_shopper_id
+    ]
+    if selected_customers:
+        visible_customers = [
+            selected_customers[0],
+            *[customer for customer in customers if customer.uid != selected_shopper_id],
+        ][:4]
+    else:
+        visible_customers = customers[:4]
     dot_positions = SHOPPER_DOT_POSITIONS[len(visible_customers)]
     dot_layers = [
         (
             f"radial-gradient(circle at {x}% {y}%, "
-            f"{SHOPPER_COLORS[customer.shopper_type]} 0 3.5px, "
-            "#ffffff 3.7px 4.8px, transparent 5px)"
+            f"{SHOPPER_COLORS[customer.shopper_type]} 0 "
+            f"{'4.4px' if customer.uid == selected_shopper_id else '3.5px'}, "
+            f"#ffffff {'4.6px 5.8px' if customer.uid == selected_shopper_id else '3.7px 4.8px'}, "
+            f"{'#facc15 6px 7.4px, #111827 7.6px 8.2px, ' if customer.uid == selected_shopper_id else ''}"
+            f"transparent {'8.4px' if customer.uid == selected_shopper_id else '5px'})"
         )
         for customer, (x, y) in zip(visible_customers, dot_positions)
     ]
@@ -201,8 +225,9 @@ def InteractiveStoreView(model: StoreModel):
 
         return handler
 
-    solara.Column(
-        gap="12px",
+    solara.Row(
+        gap="16px",
+        style="align-items:flex-start; width:100%; overflow-x:auto; flex-wrap:nowrap;",
         children=[
             StoreGrid(model, selected_id, select),
             PageZeroStatusPanel(model, selected_id, show_live_metrics, set_show_live_metrics),
@@ -212,7 +237,13 @@ def InteractiveStoreView(model: StoreModel):
 
 @solara.component
 def PageZeroStatusPanel(model: StoreModel, selected_id: str, show_live_metrics: bool, set_show_live_metrics):
-    with solara.Column(gap="8px", style="min-width:300px; max-width:380px;"):
+    with solara.Column(
+        gap="8px",
+        style=(
+            "width:360px; min-width:320px; max-width:420px; "
+            "flex:0 0 360px; max-height:72vh; overflow:auto;"
+        ),
+    ):
         solara.Switch(
             label="Show Live Metrics",
             value=show_live_metrics,
@@ -228,8 +259,9 @@ def PageZeroStatusPanel(model: StoreModel, selected_id: str, show_live_metrics: 
 def StoreGrid(model: StoreModel, selected_id: str, select):
     update_counter.get()
     selected_kind, selected_key = parse_selection(selected_id)
+    selected_shopper_id = selected_key if selected_kind == "shopper" else None
 
-    with solara.Column(gap="8px", style="width:640px; min-width:640px; overflow-x:auto;"):
+    with solara.Column(gap="8px", style="width:640px; min-width:640px; flex:0 0 640px;"):
         solara.Markdown(
             f"**{model.layout_name.replace('_', ' ').title()} layout** | "
             f"{model.current_time_label} {model.current_traffic_period} | "
@@ -333,16 +365,27 @@ def StoreGrid(model: StoreModel, selected_id: str, select):
                     if customers:
                         customer = customers[0]
                         label = ""
-                        background = shopper_circle_background(background, customers)
+                        selected_shopper_on_tile = any(
+                            c.uid == selected_shopper_id for c in customers
+                        )
+                        background = shopper_circle_background(
+                            background,
+                            customers,
+                            selected_shopper_id,
+                        )
                         click_kind = "shopper"
                         click_key = customer.uid
                         tooltip = (
                             f"{len(customers)} shopper(s) on this tile\n\n"
                             + "\n\n".join(customer_tooltip(c) for c in customers)
                         )
+                    else:
+                        selected_shopper_on_tile = False
 
                     cell_selection_id = selection_id(click_kind, click_key)
                     is_selected = click_kind != "none" and selected_id == cell_selection_id
+                    if selected_shopper_on_tile:
+                        is_selected = True
                     if selected_kind == "cashier" and pos in model.layout.checkout_queue_cells.get(selected_key, []):
                         is_selected = True
 
@@ -356,6 +399,7 @@ def StoreGrid(model: StoreModel, selected_id: str, select):
                                 color=color,
                                 border=border,
                                 selected=is_selected,
+                                selected_shopper=selected_shopper_on_tile,
                             ),
                         )
         StoreLegend()
