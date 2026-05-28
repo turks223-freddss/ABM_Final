@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 from pathlib import Path
 
@@ -11,8 +12,9 @@ os.environ.setdefault("MPLCONFIGDIR", str(MPL_CONFIG_DIR))
 import solara
 from matplotlib.figure import Figure
 from matplotlib.patches import Circle, Patch, Rectangle
-from mesa.visualization import SolaraViz, make_plot_component
-from mesa.visualization.utils import update_counter
+from mesa.visualization import make_plot_component
+import mesa.visualization.solara_viz as mesa_solara_viz
+from mesa.visualization.utils import force_update, update_counter
 
 from customer_agent import SHOPPER_PROFILES
 from model import StoreModel
@@ -42,6 +44,14 @@ CATEGORY_COLORS = {
 }
 
 
+SHOPPER_DOT_POSITIONS = {
+    1: ((50, 50),),
+    2: ((38, 50), (62, 50)),
+    3: ((50, 34), (36, 64), (64, 64)),
+    4: ((35, 35), (65, 35), (35, 65), (65, 65)),
+}
+
+
 def css_cell_style(
     background: str,
     color: str = "#111827",
@@ -58,19 +68,33 @@ def css_cell_style(
     )
 
 
-def shopper_label(customer) -> str:
-    return str(customer.uid)
+def shopper_circle_background(background: str, customers) -> str:
+    if not customers:
+        return background
+
+    visible_customers = customers[:4]
+    dot_positions = SHOPPER_DOT_POSITIONS[len(visible_customers)]
+    dot_layers = [
+        (
+            f"radial-gradient(circle at {x}% {y}%, "
+            f"{SHOPPER_COLORS[customer.shopper_type]} 0 3.5px, "
+            "#ffffff 3.7px 4.8px, transparent 5px)"
+        )
+        for customer, (x, y) in zip(visible_customers, dot_positions)
+    ]
+    return ", ".join([*dot_layers, background])
 
 
 def item_tooltip(item) -> str:
     promo = "yes" if item.promotion else "no"
+    discount = f"{item.discount_percent:.1f}%" if item.promotion else "0.0%"
     return (
         f"{item.name}\n"
         f"Category: {item.category}\n"
         f"Price: ${item.sale_price:.2f}\n"
-        f"Profit: ${item.profit:.2f}\n"
         f"List chance: {item.list_probability_percent:.1f}%\n"
         f"Promotion: {promo}\n"
+        f"Discount: {discount}\n"
         f"Visibility: {item.visibility:.2f}"
     )
 
@@ -80,7 +104,9 @@ def customer_tooltip(customer) -> str:
         f"Shopper {customer.uid}\n"
         f"Type: {SHOPPER_PROFILES[customer.shopper_type].name}\n"
         f"State: {customer.state}\n"
-        f"Patience: {customer.patience_level:.1f}/{customer.max_patience:.0f}\n"
+        f"Heading checkout: {'yes' if getattr(customer, 'should_head_to_checkout', False) else 'no'}\n"
+        f"Patience: {customer.patience_level:.1f}/{customer.max_patience:.0f} "
+        f"({customer.patience_ratio:.0%})\n"
         f"Basket items: {len(customer.bought_item_names)}\n"
         f"Remaining list: {len(customer.remaining_items)}"
     )
@@ -151,9 +177,21 @@ def draw_cell(ax, x: int, y: int, color: str, alpha: float = 1.0, edge: str = "#
     )
 
 
+def legend_swatch(color: str, border: str = "#64748b", shape: str = "square") -> str:
+    radius = "999px" if shape == "circle" else "2px"
+    return (
+        "<span style='display:inline-block; width:0.85em; height:0.85em; "
+        f"border-radius:{radius}; background:{color}; border:1px solid {border}; "
+        "vertical-align:-0.08em; margin-right:0.35em;'></span>"
+    )
+
+
+def legend_item(label: str, color: str, border: str = "#64748b", shape: str = "square") -> str:
+    return f"{legend_swatch(color, border=border, shape=shape)}{label}"
+
+
 @solara.component
 def InteractiveStoreView(model: StoreModel):
-    update_counter.get()
     selected_id, set_selected_id = solara.use_state("none:")
 
     def select(kind, key):
@@ -197,16 +235,7 @@ def StoreGrid(model: StoreModel, selected_id: str, select):
                     items = items_at_cell(model, pos)
                     checkout_for_queue = model.layout.checkout_for_queue_cell(pos)
 
-                    if customers:
-                        customer = customers[0]
-                        label = shopper_label(customer)
-                        background = SHOPPER_COLORS[customer.shopper_type]
-                        color = "white"
-                        border = "#ffffff"
-                        click_kind = "shopper"
-                        click_key = customer.uid
-                        tooltip = "\n\n".join(customer_tooltip(c) for c in customers)
-                    elif items:
+                    if items:
                         item = items[0]
                         label = "*" if item.promotion else "I"
                         background = CATEGORY_COLORS.get(item.category, "#94a3b8")
@@ -261,6 +290,14 @@ def StoreGrid(model: StoreModel, selected_id: str, select):
                         click_kind = "none"
                         click_key = None
                         tooltip = f"Empty {category.replace('_', ' ')} shelf"
+                    elif pos in model.layout.wall_cells:
+                        label = "W"
+                        background = "#111827"
+                        color = "white"
+                        border = "#020617"
+                        click_kind = "none"
+                        click_key = None
+                        tooltip = f"Manual wall {pos}"
                     elif pos in model.layout.passable:
                         label = ""
                         background = "#f8fafc"
@@ -277,6 +314,17 @@ def StoreGrid(model: StoreModel, selected_id: str, select):
                         click_kind = "none"
                         click_key = None
                         tooltip = f"Wall {pos}"
+
+                    if customers:
+                        customer = customers[0]
+                        label = ""
+                        background = shopper_circle_background(background, customers)
+                        click_kind = "shopper"
+                        click_key = customer.uid
+                        tooltip = (
+                            f"{len(customers)} shopper(s) on this tile\n\n"
+                            + "\n\n".join(customer_tooltip(c) for c in customers)
+                        )
 
                     cell_selection_id = selection_id(click_kind, click_key)
                     is_selected = click_kind != "none" and selected_id == cell_selection_id
@@ -295,6 +343,28 @@ def StoreGrid(model: StoreModel, selected_id: str, select):
                                 selected=is_selected,
                             ),
                         )
+        StoreLegend()
+
+
+@solara.component
+def StoreLegend():
+    shopper_items = " &nbsp; ".join(
+        legend_item(SHOPPER_PROFILES[key].name, color, border="#ffffff", shape="circle")
+        for key, color in SHOPPER_COLORS.items()
+    )
+    category_items = " &nbsp; ".join(
+        legend_item(category.replace("_", " ").title(), color)
+        for category, color in CATEGORY_COLORS.items()
+    )
+    solara.Markdown(
+        f"""
+**Shopper types:** {shopper_items}
+
+**Item categories:** {category_items}
+
+**Other:** {legend_item("Sale item", "#facc15", border="#78350f")} {legend_item("Cashier", "#fecaca", border="#dc2626")} {legend_item("Queue", "#fef08a", border="#2563eb")} {legend_item("Wall", "#111827", border="#020617")}
+"""
+    )
 
 
 @solara.component
@@ -312,6 +382,11 @@ def SelectionPanel(model: StoreModel, selected_id: str):
             basket = ", ".join(customer.bought_item_names) or "Empty"
             shopping_list = ", ".join(customer.shopping_list) or "None"
             remaining = ", ".join(customer.remaining_items) or "Complete"
+            planned_completion = (
+                f"{customer.planned_completion_rate:.0%}"
+                if customer.shopping_list
+                else "No planned list"
+            )
             solara.Markdown(
                 f"""
 | Field | Value |
@@ -320,13 +395,15 @@ def SelectionPanel(model: StoreModel, selected_id: str):
 | Type | {SHOPPER_PROFILES[customer.shopper_type].name} |
 | State | {customer.state} |
 | Position | {customer.pos} |
-| Patience | {customer.patience_level:.1f} / {customer.max_patience:.0f} |
+| Heading checkout | {"Yes" if getattr(customer, "should_head_to_checkout", False) else "No"} |
+| Patience | {customer.patience_level:.1f} / {customer.max_patience:.0f} ({customer.patience_ratio:.0%}) |
 | Checkout patience | {customer.checkout_patience_level:.1f} |
 | Time spent | {customer.time_spent} steps |
 | Checkout wait | {customer.checkout_wait} steps |
 | Congestion delay | {customer.congestion_delay} steps |
-| Basket value | ${customer.basket_value:.2f} |
-| Basket profit | ${customer.basket_profit:.2f} |
+| Shopping-list completion | {planned_completion} |
+| Planned purchases | {len(customer.planned_purchases)} |
+| Unplanned purchases | {len(customer.impulse_purchases)} |
 | Basket | {basket} |
 | Shopping list | {shopping_list} |
 | Remaining list | {remaining} |
@@ -345,10 +422,9 @@ def SelectionPanel(model: StoreModel, selected_id: str):
 | Category | {item.category} |
 | Position | {item.location} |
 | Price | ${item.sale_price:.2f} |
-| Profit | ${item.profit:.2f} |
-| Margin | {item.margin:.0%} |
 | List chance | {item.list_probability_percent:.1f}% |
 | Promotion | {"Yes" if item.promotion else "No"} |
+| Discount | {item.discount_percent:.1f}% |
 | Visibility | {item.visibility:.2f} |
 | High exposure | {"Yes" if item.high_exposure else "No"} |
 """
@@ -396,6 +472,9 @@ def StoreMap(model: StoreModel):
                 draw_cell(ax, x, y, "#fb923c", edge="#ea580c")
             elif (x, y) in model.layout.checkout_queue_area_cells:
                 draw_cell(ax, x, y, "#fef08a", edge="#eab308")
+            elif (x, y) in model.layout.wall_cells:
+                draw_cell(ax, x, y, "#111827", edge="#020617")
+                ax.text(x, y, "W", ha="center", va="center", fontsize=7, weight="bold", color="white")
             elif (x, y) in model.layout.passable:
                 draw_cell(ax, x, y, "#f8fafc")
             elif (x, y) in model.layout.shelf_categories:
@@ -411,7 +490,7 @@ def StoreMap(model: StoreModel):
             else:
                 draw_cell(ax, x, y, "#334155", edge="#475569")
 
-    for x, y in model.layout.hot_zones:
+    for x, y in model.layout.hot_zones - model.layout.wall_cells:
         draw_cell(ax, x, y, "#fde68a", alpha=0.62, edge="#f59e0b")
 
     for x, y in model.layout.all_checkout_queue_cells:
@@ -491,7 +570,7 @@ def StoreMap(model: StoreModel):
         f"{model.layout_name.replace('_', ' ').title()} layout | "
         f"{model.current_time_label} {model.current_traffic_period} | "
         f"Active {model.active_shopper_count}/{model.target_active_shopper_count} | "
-        f"Profit ${model.total_profit:.2f}",
+        f"Completed lists {model.completed_shopping_list_count}/{model.num_shoppers}",
         fontsize=12,
         pad=10,
     )
@@ -530,7 +609,6 @@ def StoreMap(model: StoreModel):
         format="png",
         bbox_inches="tight",
         dependencies=[
-            update_counter.value,
             model.layout_name,
             model.num_cashiers,
             model.num_shoppers,
@@ -543,6 +621,11 @@ def StoreMap(model: StoreModel):
 def LiveMetrics(model: StoreModel):
     update_counter.get()
     summary = model.summary()
+    completed_lists = (
+        f'{summary["completed_shopping_lists"]} / {summary["shoppers_with_shopping_lists"]}'
+        if summary["shoppers_with_shopping_lists"]
+        else "No planned lists"
+    )
     solara.Markdown(
         f"""
 ### Live Metrics
@@ -550,39 +633,275 @@ def LiveMetrics(model: StoreModel):
 | Metric | Value |
 | --- | ---: |
 | Store time | {summary["current_store_time"]} |
+| Checkout cutoff | {summary["checkout_cutoff_time"]} |
+| Checkout cutoff active | {"Yes" if summary["checkout_cutoff_active"] else "No"} |
 | Traffic period | {summary["traffic_period"]} |
 | Target traffic share | {summary["traffic_share"]:.0%} |
 | Target active shoppers | {summary["target_active_shoppers"]} |
 | Cashiers | {summary["cashiers"]} |
+| Sale items | {summary["sale_items"]} |
+| Avg. sale discount | {summary["avg_sale_discount_percentage"]:.1f}% |
+| Shopping list max setting | {summary["shopping_list_max_setting"] or "Profile default"} |
 | Finished shoppers | {summary["finished_shoppers"]} / {summary["shoppers"]} |
+| Heading to checkout | {summary["checkout_bound_shoppers"]} |
 | Abandoned shoppers | {summary["abandoned_shoppers"]} / {summary["shoppers"]} |
+| Shoppers with shopping lists | {summary["shoppers_with_shopping_lists"]} / {summary["shoppers"]} |
+| Completed shopping lists | {completed_lists} |
+| Not completed shopping lists | {summary["incomplete_shopping_lists"]} |
+| Abandoned: time | {summary["abandoned_due_to_time"]} |
+| Abandoned: traffic | {summary["abandoned_due_to_traffic"]} |
+| Abandoned: congestion | {summary["abandoned_due_to_congestion"]} |
+| Abandoned: checkout | {summary["abandoned_due_to_checkout"]} |
 | Crowded tiles | {summary["crowded_tiles"]} |
 | Tile capacity blocks | {summary["tile_capacity_blocks"]} |
 | Waiting to arrive | {summary["waiting_shoppers"]} |
 | Unique shopping lists | {summary["unique_shopping_lists"]} / {summary["shoppers"]} |
-| Completion rate | {summary["completion_rate"]:.0%} |
+| Trip completion rate | {summary["completion_rate"]:.0%} |
+| Avg. shopping-list completion | {summary["avg_planned_completion"]:.0%} |
 | Abandonment rate | {summary["abandonment_rate"]:.0%} |
 | Layout score | {summary["layout_score"]} / 100 |
 | Avg. completion time | {summary["avg_completion_minutes"]} minutes |
 | Avg. checkout wait | {summary["avg_checkout_wait"]} minutes |
 | Longest checkout queue | {summary["longest_checkout_queue"]} shoppers |
 | Avg. patience remaining | {summary["avg_patience_remaining"]} minutes |
-| Avg. basket value | ${summary["avg_basket_value"]:.2f} |
-| Avg. basket profit | ${summary["avg_basket_profit"]:.2f} |
 | Avg. items per shopper | {summary["avg_items_per_shopper"]} |
 | Planned purchases | {summary["planned_purchases"]} |
-| Impulse purchases | {summary["impulse_purchases"]} |
-| Unlisted purchases | {summary["unlisted_purchases"]} |
-| Profit from unlisted purchases | ${summary["profit_from_unlisted"]:.2f} |
+| Unplanned purchases | {summary["unplanned_purchases"]} |
 | Abandoned list items | {summary["abandoned_list_items"]} |
-| Lost profit from abandonment | ${summary["lost_profit_from_abandonment"]:.2f} |
-| Revenue | ${summary["revenue"]:.2f} |
-| Profit | ${summary["profit"]:.2f} |
 | Avg. congestion delay | {summary["avg_congestion_delay"]} steps |
 | Avg. patience lost to congestion | {summary["avg_patience_lost_to_congestion"]} minutes |
 | Tile crowding patience loss | {summary["tile_crowding_patience_loss"]} minutes |
 """
     )
+
+
+def label_bars(ax, bars) -> None:
+    for bar in bars:
+        height = bar.get_height()
+        ax.annotate(
+            f"{height:.0f}",
+            xy=(bar.get_x() + bar.get_width() / 2, height),
+            xytext=(0, 3),
+            textcoords="offset points",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+        )
+
+
+@solara.component
+def ShoppingListCompletionFigure(model: StoreModel):
+    update_counter.get()
+    completed = model.completed_shopping_list_count
+    incomplete = model.incomplete_shopping_list_count
+
+    fig = Figure(figsize=(5.8, 3.4), dpi=110)
+    ax = fig.subplots()
+    bars = ax.bar(
+        ["Completed list", "Not completed"],
+        [completed, incomplete],
+        color=["#16a34a", "#94a3b8"],
+    )
+    ax.set_title("Shopping-list completion")
+    ax.set_ylabel("Shoppers")
+    ax.set_ylim(0, max(1, model.num_shoppers) * 1.12)
+    label_bars(ax, bars)
+    fig.tight_layout()
+    solara.FigureMatplotlib(
+        fig,
+        format="png",
+        bbox_inches="tight",
+        dependencies=[
+            model.step_count,
+            completed,
+            incomplete,
+        ],
+    )
+
+
+@solara.component
+def PlannedVsUnplannedFigure(model: StoreModel):
+    update_counter.get()
+    planned = model.planned_purchase_count
+    unplanned = model.unplanned_purchase_count
+
+    fig = Figure(figsize=(5.8, 3.4), dpi=110)
+    ax = fig.subplots()
+    bars = ax.bar(
+        ["Planned", "Unplanned"],
+        [planned, unplanned],
+        color=["#2563eb", "#f97316"],
+    )
+    ax.set_title("Planned vs. unplanned purchases")
+    ax.set_ylabel("Purchased items")
+    ax.set_ylim(0, max(1, planned, unplanned) * 1.18)
+    label_bars(ax, bars)
+    fig.tight_layout()
+    solara.FigureMatplotlib(
+        fig,
+        format="png",
+        bbox_inches="tight",
+        dependencies=[
+            model.step_count,
+            planned,
+            unplanned,
+        ],
+    )
+
+
+@solara.component
+def ShopperTypeOutcomeFigure(model: StoreModel):
+    update_counter.get()
+    rows = model.shopper_type_summary()
+    labels = [row["profile_name"] for row in rows]
+    finished = [row["finished_shoppers"] for row in rows]
+    abandoned = [row["abandoned_shoppers"] for row in rows]
+    x_positions = list(range(len(labels)))
+    width = 0.38
+
+    fig = Figure(figsize=(8.2, 3.8), dpi=110)
+    ax = fig.subplots()
+    finished_bars = ax.bar(
+        [x - width / 2 for x in x_positions],
+        finished,
+        width,
+        label="Completed trip",
+        color="#16a34a",
+    )
+    abandoned_bars = ax.bar(
+        [x + width / 2 for x in x_positions],
+        abandoned,
+        width,
+        label="Abandoned trip",
+        color="#dc2626",
+    )
+    ax.set_title("Trip outcome by shopper type")
+    ax.set_ylabel("Shoppers")
+    ax.set_xticks(x_positions)
+    ax.set_xticklabels(labels, rotation=20, ha="right")
+    ax.set_ylim(0, max(1, *(finished + abandoned)) * 1.18)
+    ax.legend(frameon=False, fontsize=8)
+    label_bars(ax, finished_bars)
+    label_bars(ax, abandoned_bars)
+    fig.tight_layout()
+    solara.FigureMatplotlib(
+        fig,
+        format="png",
+        bbox_inches="tight",
+        dependencies=[
+            model.step_count,
+            model.finished_shopper_count,
+            model.abandoned_shopper_count,
+        ],
+    )
+
+
+@solara.component
+def ResponsiveModelController(
+    model,
+    renderer=None,
+    *,
+    model_parameters=None,
+    play_interval=100,
+    render_interval=1,
+    use_threads=False,
+):
+    playing = solara.use_reactive(False)
+    running = solara.use_reactive(True)
+    error_message = solara.use_reactive(None)
+
+    if model_parameters is None:
+        model_parameters = {}
+    model_parameters = solara.use_reactive(model_parameters)
+
+    def safe_play_interval_seconds() -> float:
+        return max(0.25, float(play_interval.value) / 1000)
+
+    def safe_render_steps() -> int:
+        return max(1, int(render_interval.value))
+
+    def advance_model() -> None:
+        for _ in range(safe_render_steps()):
+            if not running.value:
+                break
+            model.value.step()
+            running.value = model.value.running
+            if not running.value:
+                playing.value = False
+                break
+
+    async def play_loop():
+        if not playing.value:
+            return
+        try:
+            while playing.value and running.value:
+                await asyncio.sleep(safe_play_interval_seconds())
+                if not playing.value or not running.value:
+                    break
+                advance_model()
+                force_update()
+        except Exception as exc:
+            playing.value = False
+            error_message.value = f"error in play: {exc}"
+
+    solara.lab.use_task(
+        play_loop,
+        dependencies=[playing.value, running.value],
+        prefer_threaded=False,
+        raise_error=False,
+    )
+
+    def do_step():
+        if playing.value or not running.value:
+            return
+        try:
+            advance_model()
+            force_update()
+        except Exception as exc:
+            error_message.value = f"error in step: {exc}"
+
+    def do_reset():
+        try:
+            error_message.value = None
+            playing.value = False
+            running.value = True
+            kwargs = mesa_solara_viz._build_model_init_kwargs(
+                model.value,
+                model_parameters.value,
+                add_scenario_when_empty=True,
+                require_model_accepts_scenario=True,
+            )
+            model.value = type(model.value)(**kwargs)
+            if renderer is not None:
+                renderer.value = mesa_solara_viz.copy_renderer(renderer.value, model.value)
+            force_update()
+        except Exception as exc:
+            error_message.value = f"error in reset: {exc}"
+
+    def do_play_pause():
+        if running.value:
+            playing.value = not playing.value
+
+    with solara.Row(justify="space-between"):
+        solara.Button(label="Reset", color="primary", on_click=do_reset)
+        solara.Button(
+            label="Pause" if playing.value else "Play",
+            color="primary",
+            on_click=do_play_pause,
+            disabled=not running.value,
+        )
+        solara.Button(
+            label="Step",
+            color="primary",
+            on_click=do_step,
+            disabled=playing.value or not running.value,
+        )
+
+    if error_message.value:
+        solara.Error(label=error_message.value)
+
+
+mesa_solara_viz.ModelController = ResponsiveModelController
 
 
 model_params = {
@@ -613,13 +932,79 @@ model_params = {
         "max": 1440,
         "step": 60,
     },
+    "shopping_list_size": {
+        "type": "InputText",
+        "value": "",
+        "label": "Max shopping list items",
+    },
     "promotion_level": {
         "type": "SliderFloat",
         "value": 0.25,
-        "label": "Promotion level",
+        "label": "Promotion level (blank sale count)",
         "min": 0.0,
         "max": 0.8,
         "step": 0.05,
+    },
+    "sale_item_count": {
+        "type": "InputText",
+        "value": "",
+        "label": "Exact sale item count",
+    },
+    "sale_discount_min": {
+        "type": "SliderFloat",
+        "value": 0.20,
+        "label": "Min sale discount",
+        "min": 0.0,
+        "max": 0.9,
+        "step": 0.05,
+    },
+    "sale_discount_max": {
+        "type": "SliderFloat",
+        "value": 0.30,
+        "label": "Max sale discount",
+        "min": 0.0,
+        "max": 0.9,
+        "step": 0.05,
+    },
+    "mission_driven_percent": {
+        "type": "SliderFloat",
+        "value": 28.0,
+        "label": "Mission-driven %",
+        "min": 0.0,
+        "max": 100.0,
+        "step": 1.0,
+    },
+    "bargain_hunter_percent": {
+        "type": "SliderFloat",
+        "value": 22.0,
+        "label": "Bargain hunter %",
+        "min": 0.0,
+        "max": 100.0,
+        "step": 1.0,
+    },
+    "impulse_buyer_percent": {
+        "type": "SliderFloat",
+        "value": 18.0,
+        "label": "Impulse buyer %",
+        "min": 0.0,
+        "max": 100.0,
+        "step": 1.0,
+    },
+    "loyal_shopper_percent": {
+        "type": "SliderFloat",
+        "value": 20.0,
+        "label": "Loyal shopper %",
+        "min": 0.0,
+        "max": 100.0,
+        "step": 1.0,
+    },
+    "browser_percent": {
+        "type": "SliderFloat",
+        "value": 12.0,
+        "label": "Browser %",
+        "min": 0.0,
+        "max": 100.0,
+        "step": 1.0,
     },
     "seed": {
         "type": "SliderInt",
@@ -636,12 +1021,14 @@ model_params = {
 
 model = StoreModel()
 
-page = SolaraViz(
+page = mesa_solara_viz.SolaraViz(
     model,
     components=[
         (InteractiveStoreView, 0),
         (LiveMetrics, 0),
-        make_plot_component({"profit": "tab:green", "revenue": "tab:blue"}, page=1),
+        (ShoppingListCompletionFigure, 1),
+        (PlannedVsUnplannedFigure, 1),
+        (ShopperTypeOutcomeFigure, 2),
         make_plot_component(
             {
                 "active_shoppers": "tab:red",
@@ -655,16 +1042,14 @@ page = SolaraViz(
         make_plot_component(
             {
                 "planned_purchases": "tab:blue",
-                "impulse_purchases": "tab:orange",
-                "unlisted_purchases": "tab:red",
-                "profit_from_unlisted": "tab:green",
-                "lost_profit_from_abandonment": "tab:brown",
+                "unplanned_purchases": "tab:orange",
             },
             page=2,
         ),
     ],
     model_params=model_params,
     name="Store Layout ABM Live Simulation",
-    play_interval=180,
+    play_interval=500,
+    render_interval=1,
 )
 page

@@ -15,145 +15,157 @@ LAYOUT_NAMES = ("grid", "loop", "free_flow")
 SHELF_COORDINATES: Dict[str, Dict[str, List[Position]]] = {
     "grid": {
         "produce": [
-            (2, 13), (3, 13), (2, 14), (3, 14), (2, 15), (3, 15),
-            (2, 16), (3, 16), (2, 17), (3, 17), (2, 18), (3, 18),
+            (2, 11), (3, 11), (2, 12), (3, 12), (2, 13), (3, 13),
+            (2, 14), (3, 14), (2, 15), (3, 15), (2, 16), (3, 16),
         ],
         "bakery": [
-            (6, 13), (7, 13), (6, 14), (7, 14), (6, 15), (7, 15),
-            (6, 16), (7, 16), (6, 17), (7, 17), (6, 18), (7, 18),
+            (6, 11), (7, 11), (6, 12), (7, 12), (6, 13), (7, 13),
+            (6, 14), (7, 14), (6, 15), (7, 15), (6, 16), (7, 16),
         ],
         "pantry": [
-            (10, 13), (11, 13), (10, 14), (11, 14), (10, 15), (11, 15),
-            (10, 16), (11, 16), (10, 17), (11, 17), (10, 18), (11, 18),
+            (10, 2), (11, 2), (10, 3), (11, 3), (10, 4), (11, 4), (10, 5),
+            (11, 5), (10, 6), (11, 6), (10, 7), (11, 7), (10, 8), (11, 8),
         ],
         "beverages": [
-            (14, 13), (15, 13), (14, 14), (15, 14), (14, 15), (15, 15),
-            (14, 16), (15, 16), (14, 17), (15, 17), (14, 18), (15, 18),
+            (14, 11), (15, 11), (14, 12), (15, 12), (14, 13), (15, 13),
+            (14, 14), (15, 14), (14, 15), (15, 15), (14, 16), (15, 16),
         ],
         "dairy": [
-            (18, 13), (19, 13), (18, 14), (19, 14), (18, 15), (19, 15),
-            (18, 16), (19, 16), (18, 17), (19, 17), (18, 18), (19, 18),
+            (18, 2), (22, 2), (18, 3), (22, 3), (18, 4), (22, 4), (18, 5),
+            (22, 5), (18, 6), (22, 6), (18, 7), (22, 7), (18, 8), (22, 8),
         ],
         "meat": [
-            (2, 5), (3, 5), (2, 6), (3, 6), (2, 7), (3, 7), (2, 8),
-            (3, 8), (2, 9), (3, 9), (2, 10), (3, 10), (2, 11), (3, 11),
+            (2, 2), (3, 2), (2, 3), (3, 3), (2, 4), (3, 4), (2, 5),
+            (3, 5), (2, 6), (3, 6), (2, 7), (3, 7), (2, 8), (3, 8),
         ],
         "snacks": [
-            (6, 5), (7, 5), (6, 6), (7, 6), (6, 7), (7, 7), (6, 8),
-            (7, 8), (6, 9), (7, 9), (6, 10), (7, 10), (6, 11), (7, 11),
+            (10, 11), (11, 11), (10, 12), (11, 12), (10, 13), (11, 13),
+            (10, 14), (11, 14), (10, 15), (11, 15), (10, 16), (11, 16),
         ],
         "frozen": [
-            (10, 5), (11, 5), (10, 6), (11, 6), (10, 7), (11, 7), (10, 8),
-            (11, 8), (10, 9), (11, 9), (10, 10), (11, 10), (10, 11), (11, 11),
+            (6, 2), (7, 2), (6, 3), (7, 3), (6, 4), (7, 4), (6, 5),
+            (7, 5), (6, 6), (7, 6), (6, 7), (7, 7), (6, 8), (7, 8),
         ],
         "household": [
-            (14, 5), (15, 5), (14, 6), (15, 6), (14, 7), (15, 7), (14, 8),
-            (15, 8), (14, 9), (15, 9), (14, 10), (15, 10), (14, 11), (15, 11),
+            (14, 2), (15, 2), (14, 3), (15, 3), (14, 4), (15, 4), (14, 5),
+            (15, 5), (14, 6), (15, 6), (14, 7), (15, 7), (14, 8), (15, 8),
         ],
         "personal_care": [
-            (18, 5), (19, 5), (18, 6), (19, 6), (18, 7), (19, 7), (18, 8),
-            (19, 8), (18, 9), (19, 9), (18, 10), (19, 10), (18, 11), (19, 11),
+            (18, 11), (22, 11), (18, 12), (22, 12), (18, 13), (22, 13),
+            (18, 14), (22, 14), (18, 15), (22, 15), (18, 16), (22, 16),
         ],
         "checkout": [
-            (21, 5), (22, 5), (21, 6), (22, 6), (21, 7), (22, 7), (21, 8),
-            (22, 8), (21, 9), (22, 9), (21, 10), (22, 10), (21, 11), (22, 11),
-            (21, 12), (22, 12), (21, 13), (22, 13), (21, 14), (22, 14),
-            (21, 15), (22, 15), (21, 16), (22, 16), (21, 17), (22, 17),
-            (21, 18), (22, 18),
+            (19,22),(20,22),(21,22),(22,22),(22,21),(22,20),(22,19),(4,22),
+            (3,22),(2,22),(1,22),(1,19),(1,20),(1,21),
         ],
     },
     "loop": {
         "produce": [
-            (2, 14), (3, 14), (2, 15), (3, 15), (2, 16), (3, 16),
-            (2, 17), (3, 17), (4, 18), (5, 18), (6, 18), (7, 18),
+            (1, 10), (1, 16), (1, 11), (1, 17), (1, 12), (1, 18),
+            (1, 13), (4, 10), (1, 14), (4, 11), (1, 15), (4, 12),
         ],
         "bakery": [
-            (2, 4), (3, 4), (4, 4), (5, 4), (2, 5), (3, 5),
-            (2, 6), (3, 6), (2, 7), (3, 7), (2, 8), (3, 8),
+            (8, 16), (7, 16),
+            (6, 16), (5, 16), (4, 16), (4, 15), (4, 13), (4, 14),
         ],
         "pantry": [
-            (10, 10), (11, 10), (12, 10), (13, 10), (10, 11), (11, 11),
-            (12, 11), (13, 11), (10, 12), (11, 12), (12, 12), (13, 12),
+            (4,9),(4,8),(4,7),(4,6),(4,5),
+            (4,4),(5,4),(6,4),(7,4),(8,4),
         ],
         "beverages": [
-            (16, 9), (17, 9), (18, 9), (19, 9), (16, 10), (17, 10),
-            (18, 10), (19, 10), (16, 11), (17, 11), (18, 11), (19, 11),
+            (17, 16), (18, 16),
+            (19, 16), (19, 15), (19, 14), (19, 13), (19, 12), (19, 11),
         ],
         "dairy": [
-            (14, 3), (15, 3), (16, 3), (17, 3), (18, 3), (19, 3),
-            (14, 4), (15, 4), (16, 4), (17, 4), (18, 4), (19, 4),
+            (21, 1), (22, 2), (22, 1), (22, 3), (19, 4), (22, 4), (19, 5),
+            (22, 5), (19, 6), (22, 6), (19, 7), (22, 7), (22, 9), (22, 8),
         ],
         "meat": [
-            (10, 5), (11, 5), (12, 5), (13, 5), (10, 6), (11, 6),
-            (12, 6), (13, 6), (10, 7), (11, 7), (12, 7), (13, 7),
+            (1, 3), (1, 2), (1, 4), (1, 1), (1, 5), (2, 1), (1, 6),
+            (3, 1), (1, 7), (4, 1), (1, 8), (5, 1), (1, 9), (6, 1),
         ],
         "snacks": [
-            (20, 12), (21, 12), (20, 13), (21, 13), (20, 14), (21, 14),
-            (20, 15), (21, 15), (20, 16), (21, 16), (20, 17), (21, 17),
+            (9, 16), (10, 16), (11, 16), (12, 16), (13, 16), (14, 16),
+            (15, 16), (16, 16),
         ],
         "frozen": [
-            (20, 5), (21, 5), (20, 6), (21, 6), (20, 7), (21, 7),
-            (20, 8), (21, 8), (20, 9), (21, 9), (20, 10), (21, 10),
+            (7, 1), (8, 1), (9, 1), (10, 1), (11, 1), (12, 1), (13, 1),
+            (14, 1), (15, 1), (16, 1), (17, 1), (18, 1), (19, 1), (20, 1),
         ],
         "household": [
-            (6, 8), (7, 8), (6, 9), (7, 9), (6, 10), (7, 10),
-            (6, 11), (7, 11), (6, 12), (7, 12), (6, 13), (7, 13),
+            (9,4),(10,4),(11,4),(12,4),(13,4),(14,4),(15,4),(16,4),(17,4),(18,4),
         ],
         "personal_care": [
-            (8, 18), (9, 18), (10, 18), (11, 18), (12, 18), (13, 18),
-            (8, 17), (9, 17), (10, 17), (11, 17), (12, 17), (13, 17),
+            (22, 10), (22, 11), (22, 18), (22, 12), (22, 17), (22, 13),
+            (19, 8), (22, 14), (19, 9), (22, 15), (19, 10), (22, 16),
         ],
         "checkout": [
-            (14, 18), (15, 18), (16, 18), (17, 18), (18, 18), (19, 18),
-            (20, 18), (21, 18),
+            (19,22),(20,22),(21,22),(22,22),(22,21),(22,20),(22,19),(4,22),
+            (3,22),(2,22),(1,22),(1,19),(1,20),(1,21),
         ],
     },
     "free_flow": {
         "produce": [
-            (2, 13), (3, 13), (2, 14), (3, 14), (2, 15), (3, 15),
-            (5, 16), (6, 16), (7, 16), (5, 17), (6, 17), (7, 17),
+            (2, 19), (3, 19),
+            (2, 20), (3, 20),
+            (2, 21), (3, 21),
         ],
         "bakery": [
-            (3, 4), (4, 4), (5, 4), (6, 4), (3, 5), (4, 5),
-            (5, 5), (6, 5), (8, 7), (9, 7), (8, 8), (9, 8),
+            (3, 11), (4, 11), (5, 11),
+            (3, 12), (5, 12),
+            (3, 13), (5, 13),
+            (3, 14), (4, 14), (5, 14),
         ],
         "pantry": [
-            (10, 8), (11, 8), (12, 8), (13, 8), (10, 9), (11, 9),
-            (12, 9), (13, 9), (11, 13), (12, 13), (13, 13), (14, 13),
+            (1, 1), (2, 1), (3, 1), (4, 1), (5, 1), (6, 1),
+            (17, 1), (18, 1), (19, 1), (20, 1), (21, 1), (22, 1),
         ],
-        "beverages": [
-            (16, 7), (17, 7), (18, 7), (19, 7), (16, 8), (17, 8),
-            (18, 8), (19, 8), (17, 11), (18, 11), (19, 11), (20, 11),
-        ],
+        "beverages": [    
+            (18, 14), (19, 14), (20, 14),
+            (17, 15), (21, 15),
+            (16, 12), (21, 12),(16,14),(16,15),(16,13),
+            (15, 11), (16, 11), (17, 11), (18, 11), (19, 11), (20, 11),],
         "dairy": [
-            (15, 3), (16, 3), (17, 3), (18, 3), (19, 3), (20, 3),
-            (15, 4), (16, 4), (17, 4), (18, 4), (19, 4), (20, 4),
+            (11,4),(12,4),(11,5),(12,5),(11,6),(12,6),(11,7),(12,7)
         ],
         "meat": [
-            (11, 4), (12, 4), (13, 4), (14, 4), (11, 5), (12, 5),
-            (13, 5), (14, 5), (12, 6), (13, 6), (14, 6), (15, 6),
+            (3,4), (2,5),(2,6),(3,7), (4,5),(4,6),
+            (17,5),(17,6),(15,5),(15,6),(16,4),(16,7)
         ],
         "snacks": [
-            (20, 13), (21, 13), (20, 14), (21, 14), (20, 15), (21, 15),
-            (20, 16), (21, 16), (18, 17), (19, 17), (20, 17), (21, 17),
+            (9, 11), (10, 11), (11, 11), (12, 11),
+            (9, 12), (12, 12),
+            (9, 13), (12, 13),
+            (9, 14), (10, 14), (11, 14), (12, 14),
         ],
         "frozen": [
-            (19, 5), (20, 5), (21, 5), (19, 6), (20, 6), (21, 6),
-            (19, 7), (20, 7), (21, 7), (19, 8), (20, 8), (21, 8),
+            (6,5),(6,6),(8,5),(8,6),(7,4),(7,7),
+            (21,5),(21,6),(19,5),(19,6),(20,4),(20,7)
         ],
         "household": [
-            (7, 11), (8, 11), (7, 12), (8, 12), (7, 13), (8, 13),
-            (9, 14), (10, 14), (9, 15), (10, 15), (9, 16), (10, 16),
+            (9, 1), (10, 1), (11, 1), (12, 1), (13, 1), (14, 1),
         ],
         "personal_care": [
-            (4, 10), (5, 10), (4, 11), (5, 11), (4, 12), (5, 12),
-            (14, 15), (15, 15), (14, 16), (15, 16), (14, 17), (15, 17),
+            (20, 19), (21, 19),
+            (20, 20), (21, 20),
+            (20, 21), (21, 21),
         ],
-        "checkout": [
-            (8, 18), (9, 18), (10, 18), (11, 18), (12, 18), (13, 18),
-            (14, 18), (15, 18),
-        ],
+        "checkout": [(5, 17), (6, 17), (7, 17), (8, 17), (9, 17),
+        (10, 17), (11, 17), (12, 17), (13, 17), (14, 17), (15, 17),
+        (16, 17), (17, 17), (18, 17),],
     },
+}
+
+# Optional manually placed wall tiles for custom layout design.
+# These are intentionally active only for loop and free_flow layouts.
+# If a wall overlaps a shelf coordinate, the wall wins and no item is placed there.
+WALL_COORDINATES: Dict[str, List[Position]] = {
+    "loop": [],
+    "free_flow": [
+        # Long upper divider from the reference sketch.
+        
+        # Angled right-side wall/display barrier.
+    ],
 }
 
 
@@ -168,12 +180,12 @@ class StoreItem:
     promotion: bool
     is_essential: bool
     list_probability: float
+    discount_rate: float = 0.0
     high_exposure: bool = False
 
     @property
     def sale_price(self) -> float:
-        discount = 0.85 if self.promotion else 1.0
-        return round(self.price * discount, 2)
+        return round(self.price * (1.0 - self.discount_rate), 2)
 
     @property
     def profit(self) -> float:
@@ -183,6 +195,10 @@ class StoreItem:
     @property
     def list_probability_percent(self) -> float:
         return round(self.list_probability * 100, 1)
+
+    @property
+    def discount_percent(self) -> float:
+        return round(self.discount_rate * 100, 1)
 
 
 class StoreLayout:
@@ -198,6 +214,9 @@ class StoreLayout:
         promotion_level: float,
         rng,
         num_cashiers: int = 3,
+        sale_item_count: Optional[int] = None,
+        sale_discount_min: float = 0.20,
+        sale_discount_max: float = 0.30,
     ) -> None:
         if layout_name not in LAYOUT_NAMES:
             raise ValueError(f"Unknown layout '{layout_name}'. Choose from {LAYOUT_NAMES}.")
@@ -208,6 +227,15 @@ class StoreLayout:
         self.width = width
         self.height = height
         self.promotion_level = max(0.0, min(1.0, promotion_level))
+        self.sale_item_count = (
+            max(0, sale_item_count)
+            if sale_item_count is not None
+            else None
+        )
+        self.sale_discount_min, self.sale_discount_max = self._normalize_discount_range(
+            sale_discount_min,
+            sale_discount_max,
+        )
         self.rng = rng
         self.num_cashiers = max(1, min(int(num_cashiers), width - 4))
 
@@ -224,6 +252,7 @@ class StoreLayout:
         self.entrance: Position = (1, self.front_service_y)
         self.checkout: Position = (2, self.front_service_y)
         self.passable: set[Position] = set()
+        self.wall_cells: set[Position] = set()
         self.shelf_cells: set[Position] = set()
         self.accessible_shelf_cells: set[Position] = set()
         self.shelf_categories: Dict[Position, str] = {}
@@ -235,6 +264,7 @@ class StoreLayout:
         self.items_by_name: Dict[str, StoreItem] = {}
 
         self._configure_front_service_area()
+        self.wall_cells = self._manual_wall_cells()
         self._build_geometry()
         self._build_shelf_map()
         self._place_items()
@@ -256,8 +286,10 @@ class StoreLayout:
             for cashier_index in range(self.num_cashiers)
         ]
         self.checkout_separator_cells = {
-            (left_cashier[0] + 1, self.front_service_y)
+            (left_cashier[0] + 1, self.front_service_y + self.queue_direction * step)
             for left_cashier in self.checkout_positions[:-1]
+            for step in range(0, self.CHECKOUT_QUEUE_DEPTH + 1)
+            if 1 <= self.front_service_y + self.queue_direction * step <= self.height - 2
         }
         self.checkout_display_cells = list(
             SHELF_COORDINATES.get(self.layout_name, {}).get("checkout", [])
@@ -317,6 +349,7 @@ class StoreLayout:
         self.passable.update(self.checkout_queue_area_cells)
         self.passable.update(self.all_checkout_queue_cells)
         self.passable.difference_update(self.checkout_separator_cells)
+        self.passable.difference_update(self.wall_cells)
 
     def _build_grid_layout(self) -> None:
         self._build_open_floor_around_manual_shelves()
@@ -324,26 +357,29 @@ class StoreLayout:
         self.hot_zones = {
             (self.entrance[0], self.front_service_y - 1),
             (self.checkout_positions[-1][0], self.front_service_y - 1),
+            (10, 18),
+            (11, 18),
             (20, 18),
             (21, 18),
         }
         self.zone_centers = {
             "produce": (2, 16),
             "bakery": (6, 16),
-            "pantry": (10, 16),
+            "snacks": (10, 16),
             "beverages": (14, 16),
-            "dairy": (18, 16),
+            "personal_care": (18, 16),
             "meat": (2, 8),
-            "snacks": (6, 8),
-            "frozen": (10, 8),
+            "frozen": (6, 8),
+            "pantry": (10, 8),
             "household": (14, 8),
-            "personal_care": (18, 8),
+            "dairy": (18, 8),
             "checkout": self.checkout,
         }
 
     def _build_open_floor_around_manual_shelves(self) -> None:
         self._fill_open_floor()
         self.passable.difference_update(self._manual_shelf_cells())
+        self.passable.difference_update(self.wall_cells)
 
     def _manual_shelf_cells(self) -> set[Position]:
         category_cells = SHELF_COORDINATES.get(self.layout_name, {})
@@ -354,16 +390,34 @@ class StoreLayout:
             if 0 <= cell[0] < self.width and 0 <= cell[1] < self.height
         }
 
+    def _manual_wall_cells(self) -> set[Position]:
+        if self.layout_name == "grid":
+            return set()
+
+        protected_cells = set(self.entrance_positions)
+        protected_cells.update(self.checkout_positions)
+        protected_cells.update(self.front_service_area_cells)
+        protected_cells.update(self.checkout_queue_area_cells)
+        protected_cells.update(self.all_checkout_queue_cells)
+
+        return {
+            cell
+            for cell in WALL_COORDINATES.get(self.layout_name, [])
+            if 0 <= cell[0] < self.width
+            and 0 <= cell[1] < self.height
+            and cell not in protected_cells
+        }
+
     def _build_loop_layout(self) -> None:
         self._build_open_floor_around_manual_shelves()
         bottom = 1
         top = self.height - 2
 
-        manual_shelves = self._manual_shelf_cells()
+        blocked_cells = self._manual_shelf_cells() | self.wall_cells
         self.loop_path = [
             cell
             for cell in self._build_reference_loop_path()
-            if cell not in manual_shelves
+            if cell not in blocked_cells
         ]
         self.passable.update(self.loop_path)
 
@@ -401,16 +455,16 @@ class StoreLayout:
             (self.width - 4, self.height // 2 + 1),
         }
         self.zone_centers = {
-            "produce": (3, self.height // 2 - 2),
-            "bakery": (5, self.height // 2 + 2),
-            "pantry": (self.width // 2 + 2, self.height // 2),
-            "beverages": (self.width // 2 + 5, self.height // 2 - 1),
-            "dairy": (self.width - 4, 3),
-            "meat": (self.width - 5, self.height - 3),
-            "snacks": (self.width // 2 - 2, self.height // 2),
-            "frozen": (self.width - 6, self.height // 2 + 3),
-            "household": (self.width // 2, self.height - 3),
-            "personal_care": (self.width // 2 - 3, self.height - 3),
+            "produce": (2, 20),
+            "bakery": (3, 14),
+            "pantry": (3, 1),
+            "beverages": (20, 20),
+            "dairy": (11, 6),
+            "meat": (2, 4),
+            "snacks": (10, 14),
+            "frozen": (6, 4),
+            "household": (10, 1),
+            "personal_care": (20, 20),
             "checkout": self.checkout,
         }
 
@@ -464,7 +518,9 @@ class StoreLayout:
             cell: category
             for category, cells in manual_category_cells.items()
             for cell in cells
-            if 0 <= cell[0] < self.width and 0 <= cell[1] < self.height
+            if 0 <= cell[0] < self.width
+            and 0 <= cell[1] < self.height
+            and cell not in self.wall_cells
         }
         for cell in self.checkout_separator_cells:
             manual_categories[cell] = "checkout"
@@ -480,74 +536,89 @@ class StoreLayout:
 
     def _place_items(self) -> None:
         item_specs = [
-            ("Apples", "produce", 3.50, 0.34, True, 0.46),
-            ("Bananas", "produce", 2.40, 0.30, True, 0.54),
-            ("Oranges", "produce", 4.10, 0.33, True, 0.34),
-            ("Tomatoes", "produce", 4.80, 0.36, True, 0.30),
-            ("Potatoes", "produce", 4.20, 0.32, True, 0.36),
-            ("Onions", "produce", 3.20, 0.31, True, 0.24),
+            ("Tomatoes", "produce", 3.50, 0.34, True, 0.42),
+            ("Onions", "produce", 2.90, 0.31, True, 0.38),
+            ("Garlic", "produce", 2.60, 0.34, True, 0.36),
+            ("Potatoes", "produce", 4.20, 0.32, True, 0.30),
             ("Carrots", "produce", 3.60, 0.32, True, 0.28),
-            ("Salad Pack", "produce", 5.20, 0.38, False, 0.40),
-            ("Bread", "bakery", 3.10, 0.32, True, 0.62),
-            ("Burger Buns", "bakery", 4.20, 0.34, False, 0.24),
-            ("Wraps", "bakery", 4.80, 0.35, False, 0.26),
-            ("Croissants", "bakery", 6.20, 0.48, False, 0.16),
-            ("Muffins", "bakery", 5.90, 0.46, False, 0.18),
-            ("Milk", "dairy", 4.10, 0.27, True, 0.70),
+            ("Leafy Greens", "produce", 4.10, 0.36, True, 0.30),
+            ("Cabbage", "produce", 3.40, 0.31, True, 0.26),
+            ("Eggplant", "produce", 3.80, 0.33, True, 0.24),
+            ("Bananas", "produce", 2.40, 0.30, True, 0.32),
+            ("Calamansi", "produce", 2.20, 0.35, False, 0.22),
+            ("Apples", "produce", 5.80, 0.34, False, 0.16),
+            ("Mangoes", "produce", 6.20, 0.36, False, 0.18),
+            ("Pandesal", "bakery", 2.80, 0.34, True, 0.46),
+            ("Loaf Bread", "bakery", 3.40, 0.32, True, 0.54),
+            ("Tasty Bread", "bakery", 3.20, 0.32, True, 0.44),
+            ("Bread Rolls", "bakery", 3.80, 0.34, False, 0.26),
+            ("Burger Buns", "bakery", 4.20, 0.34, False, 0.18),
+            ("Ensaymada", "bakery", 5.20, 0.46, False, 0.14),
             ("Eggs", "dairy", 5.80, 0.28, True, 0.66),
-            ("Butter", "dairy", 5.40, 0.34, True, 0.36),
-            ("Cheese", "dairy", 6.50, 0.39, True, 0.50),
-            ("Yoghurt", "dairy", 4.80, 0.35, False, 0.38),
-            ("Cream", "dairy", 3.90, 0.36, False, 0.18),
-            ("Orange Juice", "dairy", 5.20, 0.32, False, 0.26),
-            ("Chicken", "meat", 10.50, 0.31, True, 0.48),
-            ("Ground Beef", "meat", 11.20, 0.30, True, 0.36),
-            ("Pork Chops", "meat", 12.40, 0.30, False, 0.22),
-            ("Sausages", "meat", 8.40, 0.34, False, 0.24),
-            ("Bacon", "meat", 7.80, 0.36, False, 0.26),
-            ("Rice", "pantry", 4.90, 0.34, True, 0.42),
-            ("Pasta", "pantry", 3.40, 0.36, True, 0.45),
-            ("Pasta Sauce", "pantry", 4.60, 0.37, True, 0.34),
-            ("Cooking Oil", "pantry", 6.70, 0.32, True, 0.26),
-            ("Flour", "pantry", 3.70, 0.30, True, 0.22),
-            ("Sugar", "pantry", 3.30, 0.29, True, 0.22),
-            ("Cereal", "pantry", 5.60, 0.40, False, 0.34),
+            ("Milk", "dairy", 4.10, 0.27, True, 0.34),
+            ("UHT Milk", "dairy", 4.60, 0.30, True, 0.22),
+            ("Margarine", "dairy", 3.80, 0.34, True, 0.24),
+            ("Cheese", "dairy", 6.50, 0.39, False, 0.26),
+            ("Butter", "dairy", 5.40, 0.34, False, 0.20),
+            ("Yogurt", "dairy", 4.80, 0.35, False, 0.16),
+            ("Cream", "dairy", 3.90, 0.36, False, 0.10),
+            ("Chicken", "meat", 10.50, 0.31, True, 0.52),
+            ("Pork", "meat", 11.20, 0.30, True, 0.48),
+            ("Fish", "meat", 10.80, 0.30, True, 0.46),
+            ("Ground Pork", "meat", 9.60, 0.32, True, 0.32),
+            ("Hotdogs", "meat", 7.20, 0.34, False, 0.28),
+            ("Longganisa", "meat", 8.40, 0.36, False, 0.26),
+            ("Tocino", "meat", 8.90, 0.35, False, 0.20),
+            ("Rice", "pantry", 8.90, 0.25, True, 0.78),
+            ("Cooking Oil", "pantry", 6.70, 0.32, True, 0.46),
+            ("Instant Noodles", "pantry", 2.40, 0.38, True, 0.48),
+            ("Soy Sauce", "pantry", 2.90, 0.34, True, 0.34),
+            ("Vinegar", "pantry", 2.70, 0.34, True, 0.30),
+            ("Sugar", "pantry", 3.30, 0.29, True, 0.28),
+            ("Flour", "pantry", 3.70, 0.30, True, 0.20),
+            ("Canned Sardines", "pantry", 3.00, 0.33, True, 0.38),
             ("Canned Tuna", "pantry", 3.20, 0.33, False, 0.30),
-            ("Baked Beans", "pantry", 2.40, 0.34, False, 0.24),
-            ("Soup", "pantry", 3.10, 0.35, False, 0.22),
-            ("Coffee", "pantry", 8.50, 0.42, False, 0.28),
-            ("Tea Bags", "pantry", 5.20, 0.39, False, 0.22),
-            ("Chocolate", "snacks", 3.80, 0.52, False, 0.22),
-            ("Chips", "snacks", 4.70, 0.50, False, 0.34),
-            ("Soft Drink", "snacks", 5.40, 0.45, False, 0.30),
-            ("Cookies", "snacks", 4.40, 0.48, False, 0.28),
-            ("Crackers", "snacks", 3.90, 0.45, False, 0.24),
-            ("Granola Bars", "snacks", 5.10, 0.43, False, 0.22),
-            ("Nuts", "snacks", 6.80, 0.44, False, 0.20),
-            ("Water", "beverages", 4.20, 0.35, True, 0.30),
-            ("Cola", "beverages", 5.60, 0.44, False, 0.30),
-            ("Sparkling Water", "beverages", 5.20, 0.38, False, 0.20),
-            ("Sports Drink", "beverages", 4.80, 0.42, False, 0.18),
-            ("Energy Drink", "beverages", 4.10, 0.48, False, 0.16),
-            ("Ice Cream", "frozen", 7.20, 0.41, False, 0.20),
-            ("Frozen Pizza", "frozen", 8.90, 0.36, False, 0.28),
-            ("Frozen Vegetables", "frozen", 4.60, 0.32, True, 0.28),
-            ("Frozen Berries", "frozen", 6.40, 0.36, False, 0.18),
-            ("Frozen Chips", "frozen", 5.20, 0.35, False, 0.22),
-            ("Laundry Powder", "household", 13.50, 0.28, True, 0.18),
-            ("Dish Soap", "household", 4.80, 0.34, True, 0.22),
-            ("Trash Bags", "household", 6.80, 0.35, False, 0.18),
-            ("Paper Towels", "household", 6.90, 0.30, False, 0.16),
-            ("Toilet Paper", "household", 9.90, 0.28, True, 0.34),
+            ("Coffee Sachets", "pantry", 4.40, 0.42, False, 0.42),
+            ("Cereal", "pantry", 5.60, 0.40, False, 0.12),
+            ("Pasta", "pantry", 3.40, 0.36, False, 0.18),
+            ("Biscuits", "snacks", 3.80, 0.48, False, 0.36),
+            ("Chips", "snacks", 4.70, 0.50, False, 0.32),
+            ("Candies", "snacks", 2.20, 0.56, False, 0.28),
+            ("Chocolate", "snacks", 3.80, 0.52, False, 0.24),
+            ("Cookies", "snacks", 4.40, 0.48, False, 0.24),
+            ("Crackers", "snacks", 3.90, 0.45, False, 0.26),
+            ("Snack Cakes", "snacks", 4.60, 0.47, False, 0.20),
+            ("Nuts", "snacks", 6.80, 0.44, False, 0.14),
+            ("Bottled Water", "beverages", 4.20, 0.35, True, 0.34),
+            ("Soft Drink", "beverages", 5.60, 0.44, False, 0.30),
+            ("Powdered Juice", "beverages", 3.50, 0.39, False, 0.22),
+            ("Fruit Juice", "beverages", 5.20, 0.38, False, 0.18),
+            ("Coffee Drink", "beverages", 4.70, 0.42, False, 0.16),
+            ("Energy Drink", "beverages", 4.10, 0.48, False, 0.12),
+            ("Tea Bags", "beverages", 5.20, 0.39, False, 0.10),
+            ("Frozen Hotdogs", "frozen", 7.20, 0.35, False, 0.24),
+            ("Frozen Fish", "frozen", 8.40, 0.32, True, 0.22),
+            ("Frozen Vegetables", "frozen", 4.60, 0.32, True, 0.20),
+            ("Ice Cream", "frozen", 7.20, 0.41, False, 0.18),
+            ("Frozen Dumplings", "frozen", 6.80, 0.38, False, 0.14),
+            ("Frozen Fries", "frozen", 5.20, 0.35, False, 0.16),
+            ("Laundry Detergent", "household", 13.50, 0.28, True, 0.30),
+            ("Dishwashing Liquid", "household", 4.80, 0.34, True, 0.28),
+            ("Toilet Paper", "household", 9.90, 0.28, True, 0.24),
+            ("Fabric Conditioner", "household", 8.20, 0.32, False, 0.18),
             ("All-Purpose Cleaner", "household", 5.40, 0.36, False, 0.16),
-            ("Shampoo", "personal_care", 7.20, 0.42, False, 0.18),
-            ("Toothpaste", "personal_care", 4.20, 0.40, True, 0.26),
-            ("Soap", "personal_care", 3.50, 0.39, True, 0.22),
+            ("Trash Bags", "household", 6.80, 0.35, False, 0.14),
+            ("Paper Towels", "household", 6.90, 0.30, False, 0.12),
+            ("Shampoo Sachet", "personal_care", 2.50, 0.42, True, 0.30),
+            ("Bath Soap", "personal_care", 3.50, 0.39, True, 0.30),
+            ("Toothpaste", "personal_care", 4.20, 0.40, True, 0.28),
+            ("Tissue", "personal_care", 4.80, 0.35, True, 0.20),
             ("Deodorant", "personal_care", 5.80, 0.43, False, 0.16),
+            ("Sanitary Pads", "personal_care", 6.20, 0.34, False, 0.14),
             ("Checkout Gum", "checkout", 2.20, 0.58, False, 0.00),
             ("Checkout Mints", "checkout", 2.60, 0.57, False, 0.00),
             ("Chocolate Bar", "checkout", 2.80, 0.55, False, 0.00),
-            ("Magazine", "checkout", 6.50, 0.38, False, 0.00),
+            ("Candy Pack", "checkout", 2.40, 0.56, False, 0.00),
             ("Batteries", "checkout", 6.00, 0.49, False, 0.00),
         ]
 
@@ -560,6 +631,11 @@ class StoreLayout:
             sorted(set(self.shelf_categories.values()) - set(category_order))
         )
         name_counts: Dict[str, int] = {}
+        promotion_slots = self._promotion_slot_indexes(
+            category_order,
+            templates_by_category,
+        )
+        slot_index = 0
 
         for category in category_order:
             shelf_locations = sorted(
@@ -590,7 +666,11 @@ class StoreLayout:
                 if category in {"snacks", "checkout"}:
                     base_visibility += 0.12
 
-                promotion = self.rng.random() < self.promotion_level
+                if promotion_slots is None:
+                    promotion = self.rng.random() < self.promotion_level
+                else:
+                    promotion = slot_index in promotion_slots
+                discount_rate = self._sale_discount_rate() if promotion else 0.0
                 item = StoreItem(
                     name=name,
                     category=category,
@@ -601,11 +681,52 @@ class StoreLayout:
                     promotion=promotion,
                     is_essential=essential,
                     list_probability=list_probability,
+                    discount_rate=discount_rate,
                     high_exposure=high_exposure,
                 )
                 self.items.append(item)
                 self.items_by_name[item.name] = item
                 self.items_by_location.setdefault(location, []).append(item)
+                slot_index += 1
+
+    def _normalize_discount_range(
+        self,
+        minimum: float,
+        maximum: float,
+    ) -> Tuple[float, float]:
+        lower = max(0.0, min(0.95, float(minimum)))
+        upper = max(0.0, min(0.95, float(maximum)))
+        if lower > upper:
+            lower, upper = upper, lower
+        return lower, upper
+
+    def _sale_discount_rate(self) -> float:
+        if self.sale_discount_min == self.sale_discount_max:
+            return self.sale_discount_min
+        return self.rng.uniform(self.sale_discount_min, self.sale_discount_max)
+
+    def _promotion_slot_indexes(
+        self,
+        category_order: List[str],
+        templates_by_category: Dict[str, List[Tuple[str, str, float, float, bool, float]]],
+    ) -> Optional[set[int]]:
+        if self.sale_item_count is None:
+            return None
+
+        total_slots = 0
+        for category in category_order:
+            shelf_locations = [
+                cell
+                for cell, shelf_category in self.shelf_categories.items()
+                if shelf_category == category
+            ]
+            if shelf_locations and templates_by_category.get(category):
+                total_slots += len(shelf_locations)
+
+        sale_count = min(self.sale_item_count, total_slots)
+        slot_indexes = list(range(total_slots))
+        self.rng.shuffle(slot_indexes)
+        return set(slot_indexes[:sale_count])
 
     def _next_item_location(
         self,

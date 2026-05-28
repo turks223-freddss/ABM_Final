@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from itertools import combinations
 from statistics import mean
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 from mesa import Model
@@ -25,11 +24,11 @@ DEFAULT_SHOPPER_MIX = {
 DEFAULT_DAILY_SHOPPERS = 400
 
 DEFAULT_TRAFFIC_SHAPE = (
-    (0.0, 1 / 12, 0.05, "Opening"),
-    (1 / 12, 2 / 12, 0.35, "Morning peak"),
-    (2 / 12, 6 / 12, 0.15, "Midday"),
-    (6 / 12, 8 / 12, 0.35, "Afternoon peak"),
-    (8 / 12, 1.0, 0.10, "Evening"),
+    (0.0, 2 / 12, 0.10, "Opening/low"),
+    (2 / 12, 5 / 12, 0.20, "Late morning/midday"),
+    (5 / 12, 8 / 12, 0.35, "Philippine peak"),
+    (8 / 12, 10 / 12, 0.25, "Evening peak"),
+    (10 / 12, 1.0, 0.10, "Closing"),
 )
 
 
@@ -42,7 +41,7 @@ class TrafficPeriod:
 
 
 class StoreModel(Model):
-    """Mesa model for grocery layout, shopper movement, and store profit."""
+    """Mesa model for grocery layout, shopper movement, and shopping outcomes."""
 
     TILE_COMFORT_CAPACITY = 2
     TILE_MAX_CAPACITY = 4
@@ -57,8 +56,18 @@ class StoreModel(Model):
         max_steps: int = 720,
         promotion_level: float = 0.25,
         shopper_mix: Optional[Dict[str, float]] = None,
+        shopping_list_size: int | str | None = None,
+        sale_item_count: int | str | None = None,
+        sale_discount_min: float = 0.20,
+        sale_discount_max: float = 0.30,
+        mission_driven_percent: float | str | None = None,
+        bargain_hunter_percent: float | str | None = None,
+        impulse_buyer_percent: float | str | None = None,
+        loyal_shopper_percent: float | str | None = None,
+        browser_percent: float | str | None = None,
         opening_hour: float = 9.0,
         closing_hour: float = 21.0,
+        checkout_cutoff_hour: float = 20.0,
         traffic_profile: Optional[List[TrafficPeriod]] = None,
         seed: Optional[int] = None,
     ) -> None:
@@ -73,15 +82,40 @@ class StoreModel(Model):
         if closing_hour <= opening_hour:
             raise ValueError("closing_hour must be after opening_hour.")
 
+        self.shopping_list_size = self._coerce_optional_positive_int(
+            shopping_list_size,
+            "shopping_list_size",
+        )
+        self.sale_item_count = self._coerce_optional_nonnegative_int(
+            sale_item_count,
+            "sale_item_count",
+        )
+        self.promotion_level = self._coerce_rate(promotion_level, "promotion_level")
+        self.sale_discount_min, self.sale_discount_max = self._normalize_rate_range(
+            sale_discount_min,
+            sale_discount_max,
+            "sale discount",
+        )
+        explicit_mix = self._shopper_mix_from_percentages(
+            mission_driven_percent=mission_driven_percent,
+            bargain_hunter_percent=bargain_hunter_percent,
+            impulse_buyer_percent=impulse_buyer_percent,
+            loyal_shopper_percent=loyal_shopper_percent,
+            browser_percent=browser_percent,
+        )
+
         self.layout_name = layout_name
         self.width = width
         self.height = height
         self.num_shoppers = num_shoppers
         self.num_cashiers = max(1, min(num_cashiers, width - 4))
         self.max_steps = max_steps
-        self.promotion_level = promotion_level
         self.opening_hour = float(opening_hour)
         self.closing_hour = float(closing_hour)
+        self.checkout_cutoff_hour = min(
+            self.closing_hour,
+            max(self.opening_hour, float(checkout_cutoff_hour)),
+        )
         self.minutes_per_step = self._minutes_per_step()
         self.step_count = 0
         self.running = True
@@ -91,9 +125,12 @@ class StoreModel(Model):
             layout_name,
             width,
             height,
-            promotion_level,
+            self.promotion_level,
             self.random,
             num_cashiers=self.num_cashiers,
+            sale_item_count=self.sale_item_count,
+            sale_discount_min=self.sale_discount_min,
+            sale_discount_max=self.sale_discount_max,
         )
         self.cashier_service_minutes: Dict[Position, float] = {
             checkout_pos: round(self.random.uniform(1.8, 4.2), 2)
@@ -134,7 +171,9 @@ class StoreModel(Model):
         }
         self.category_metrics: Dict[str, Dict[str, float]] = {}
 
-        self.shopper_mix = self._normalize_mix(shopper_mix or DEFAULT_SHOPPER_MIX)
+        self.shopper_mix = self._normalize_mix(
+            explicit_mix or shopper_mix or DEFAULT_SHOPPER_MIX
+        )
         self._create_customers()
         self._activate_arrivals()
 
@@ -144,6 +183,7 @@ class StoreModel(Model):
                 "store_hour": lambda m: round(m.current_store_hour, 2),
                 "store_time": lambda m: m.current_time_label,
                 "traffic_period": lambda m: m.current_traffic_period,
+                "checkout_cutoff_active": lambda m: m.checkout_cutoff_active,
                 "traffic_share": lambda m: round(m.current_traffic_share, 3),
                 "target_active_shoppers": lambda m: m.target_active_shopper_count,
                 "active_shopper_share": lambda m: round(m.active_shopper_share, 3),
@@ -154,10 +194,13 @@ class StoreModel(Model):
                 "waiting_shoppers": lambda m: m.waiting_shopper_count,
                 "finished_shoppers": lambda m: m.finished_shopper_count,
                 "abandoned_shoppers": lambda m: m.abandoned_shopper_count,
+                "completed_shopping_lists": lambda m: m.completed_shopping_list_count,
+                "incomplete_shopping_lists": lambda m: m.incomplete_shopping_list_count,
                 "checkout_queue": lambda m: m.checkout_queue_length,
                 "revenue": lambda m: round(m.total_revenue, 2),
                 "profit": lambda m: round(m.total_profit, 2),
                 "impulse_purchases": lambda m: m.impulse_purchase_count,
+                "unplanned_purchases": lambda m: m.unplanned_purchase_count,
                 "planned_purchases": lambda m: m.planned_purchase_count,
                 "unlisted_purchases": lambda m: m.unlisted_purchase_count,
                 "revenue_from_unlisted": lambda m: round(m.revenue_from_unlisted, 2),
@@ -199,6 +242,7 @@ class StoreModel(Model):
                 ),
                 "arrived": lambda a: getattr(a, "arrived", False),
                 "shopping_list": lambda a: ", ".join(getattr(a, "shopping_list", [])),
+                "force_checkout": lambda a: getattr(a, "force_checkout", False),
                 "shopping_list_size": lambda a: len(getattr(a, "shopping_list", [])),
                 "time_spent": lambda a: getattr(a, "time_spent", 0),
                 "patience_level": lambda a: round(getattr(a, "patience_level", 0.0), 2),
@@ -241,6 +285,80 @@ class StoreModel(Model):
         if parsed <= 0:
             raise ValueError(f"{name} must be positive.")
         return parsed
+
+    def _coerce_optional_positive_int(
+        self,
+        value: int | str | None,
+        name: str,
+    ) -> Optional[int]:
+        if value is None:
+            return None
+        if isinstance(value, str) and not value.strip():
+            return None
+        return self._coerce_positive_int(value, name)
+
+    def _coerce_optional_nonnegative_int(
+        self,
+        value: int | str | None,
+        name: str,
+    ) -> Optional[int]:
+        if value is None:
+            return None
+        if isinstance(value, str) and not value.strip():
+            return None
+        try:
+            parsed = int(str(value).replace(",", "").strip())
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{name} must be a whole number.") from exc
+        if parsed < 0:
+            raise ValueError(f"{name} cannot be negative.")
+        return parsed
+
+    def _coerce_rate(self, value: float | str, name: str) -> float:
+        try:
+            parsed = float(str(value).replace("%", "").strip())
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{name} must be a percentage or decimal rate.") from exc
+        if parsed > 1.0:
+            parsed /= 100.0
+        return max(0.0, min(1.0, parsed))
+
+    def _normalize_rate_range(
+        self,
+        minimum: float | str,
+        maximum: float | str,
+        name: str,
+    ) -> Tuple[float, float]:
+        lower = self._coerce_rate(minimum, f"{name} minimum")
+        upper = self._coerce_rate(maximum, f"{name} maximum")
+        if lower > upper:
+            lower, upper = upper, lower
+        return lower, upper
+
+    def _shopper_mix_from_percentages(
+        self,
+        **percentages: float | str | None,
+    ) -> Optional[Dict[str, float]]:
+        provided = {
+            key.removesuffix("_percent"): value
+            for key, value in percentages.items()
+            if value is not None and not (isinstance(value, str) and not value.strip())
+        }
+        if not provided:
+            return None
+
+        mix = {
+            shopper_type: share * 100.0
+            for shopper_type, share in DEFAULT_SHOPPER_MIX.items()
+        }
+        for shopper_type, value in provided.items():
+            try:
+                mix[shopper_type] = max(0.0, float(str(value).replace("%", "").strip()))
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    f"{shopper_type}_percent must be a non-negative percentage."
+                ) from exc
+        return mix
 
     def _minutes_per_step(self) -> float:
         return (self.closing_hour - self.opening_hour) * 60 / self.max_steps
@@ -364,13 +482,10 @@ class StoreModel(Model):
         return {key: max(0.0, value) / total for key, value in mix.items()}
 
     def _create_customers(self) -> None:
-        shopper_types = list(self.shopper_mix)
-        weights = [self.shopper_mix[name] for name in shopper_types]
-        used_shopping_lists: Set[Tuple[str, ...]] = set()
+        shopper_types = self._shopper_type_sequence()
         arrival_times = self._arrival_times_from_traffic_profile()
-        for index in range(self.num_shoppers):
-            shopper_type = self._weighted_choice(shopper_types, weights)
-            shopping_list = self._generate_unique_shopping_list(shopper_type, used_shopping_lists)
+        for index, shopper_type in enumerate(shopper_types):
+            shopping_list = self._generate_shopping_list(shopper_type)
             customer = CustomerAgent(
                 index + 1,
                 self,
@@ -379,6 +494,27 @@ class StoreModel(Model):
                 arrival_time=arrival_times[index],
             )
             self.customers.append(customer)
+
+    def _shopper_type_sequence(self) -> List[str]:
+        shopper_types = list(self.shopper_mix)
+        raw_counts = [self.shopper_mix[name] * self.num_shoppers for name in shopper_types]
+        counts = [int(count) for count in raw_counts]
+        remaining = self.num_shoppers - sum(counts)
+        remainders = sorted(
+            range(len(raw_counts)),
+            key=lambda index: raw_counts[index] - counts[index],
+            reverse=True,
+        )
+        for index in remainders[:remaining]:
+            counts[index] += 1
+
+        sequence = [
+            shopper_type
+            for shopper_type, count in zip(shopper_types, counts)
+            for _ in range(count)
+        ]
+        self.random.shuffle(sequence)
+        return sequence
 
     def _activate_arrivals(self) -> None:
         available_slots = self.target_active_shopper_count - self.active_shopper_count
@@ -398,32 +534,10 @@ class StoreModel(Model):
             if customer.enter_store():
                 entered += 1
 
-    def _weighted_choice(self, options: List[str], weights: List[float]) -> str:
-        threshold = self.random.random() * sum(weights)
-        running = 0.0
-        for option, weight in zip(options, weights):
-            running += weight
-            if threshold <= running:
-                return option
-        return options[-1]
-
-    def _generate_unique_shopping_list(
-        self,
-        shopper_type: str,
-        used_shopping_lists: Set[Tuple[str, ...]],
-    ) -> List[str]:
-        for _ in range(200):
-            shopping_list = self._generate_shopping_list(shopper_type)
-            key = self._shopping_list_key(shopping_list)
-            if key not in used_shopping_lists:
-                used_shopping_lists.add(key)
-                return shopping_list
-
-        shopping_list = self._fallback_unique_shopping_list(shopper_type, used_shopping_lists)
-        used_shopping_lists.add(self._shopping_list_key(shopping_list))
-        return shopping_list
-
     def _generate_shopping_list(self, shopper_type: str) -> List[str]:
+        if shopper_type == "browser":
+            return []
+
         listable_items = self.layout.listable_items()
         if not listable_items:
             return []
@@ -467,13 +581,13 @@ class StoreModel(Model):
         return selected
 
     def _shopping_list_size_bounds(self, shopper_type: str) -> Tuple[int, int]:
+        if self.shopping_list_size is not None:
+            return (1, max(1, self.shopping_list_size))
         if shopper_type in {"mission_driven", "loyal_shopper"}:
-            return (5, 8)
-        if shopper_type == "browser":
-            return (2, 5)
+            return (1, 8)
         if shopper_type == "impulse_buyer":
-            return (3, 6)
-        return (4, 7)
+            return (1, 6)
+        return (1, 7)
 
     def _adjusted_list_probability(self, item: StoreItem, shopper_type: str) -> float:
         probability = item.list_probability
@@ -521,32 +635,6 @@ class StoreModel(Model):
 
     def _shopping_list_key(self, shopping_list: List[str] | Tuple[str, ...]) -> Tuple[str, ...]:
         return tuple(sorted(shopping_list))
-
-    def _fallback_unique_shopping_list(
-        self,
-        shopper_type: str,
-        used_shopping_lists: Set[Tuple[str, ...]],
-    ) -> List[str]:
-        item_names = [item.name for item in self.layout.listable_items()]
-        min_size, max_size = self._shopping_list_size_bounds(shopper_type)
-        max_size = min(max_size, len(item_names))
-        sizes = list(range(min(min_size, max_size), max_size + 1))
-        self.random.shuffle(sizes)
-
-        for size in sizes:
-            candidates = list(item_names)
-            self.random.shuffle(candidates)
-            for combination in combinations(candidates, size):
-                key = self._shopping_list_key(combination)
-                if key not in used_shopping_lists:
-                    shopping_list = list(combination)
-                    self.random.shuffle(shopping_list)
-                    return shopping_list
-
-        raise RuntimeError(
-            "Unable to create a unique shopping list for every shopper. "
-            "Reduce num_shoppers or add more listable products."
-        )
 
     def step(self) -> None:
         if not self.running:
@@ -741,20 +829,80 @@ class StoreModel(Model):
     ) -> bool:
         if pos not in self.layout.passable:
             return False
+        heading_to_checkout = (
+            mover is not None and getattr(mover, "should_head_to_checkout", False)
+        )
         queue_checkout = self.layout.checkout_for_queue_cell(pos)
         if queue_checkout is not None:
-            if mover is None or mover.remaining_items:
+            if mover is None or not heading_to_checkout:
                 return False
             if mover.checkout_position not in (None, queue_checkout):
                 return False
         if self.layout.is_checkout(pos):
-            if mover is None or mover.remaining_items:
+            if mover is None or not heading_to_checkout:
                 return False
             if mover.checkout_position not in (None, pos):
                 return False
         return (
             self.count_customers_on_tile(pos, exclude_customer=mover)
             < self.TILE_MAX_CAPACITY
+        )
+
+    def preferred_movement_step(
+        self,
+        customer: CustomerAgent,
+        target: Position,
+        preferred_step: Position,
+    ) -> Position:
+        if preferred_step == customer.pos:
+            return preferred_step
+
+        options = self.layout.neighbors(customer.pos)
+        if customer.checkout_position is not None:
+            lane = set(self.layout.checkout_queue_cells.get(customer.checkout_position, []))
+            if customer.pos in lane:
+                lane.add(customer.checkout_position)
+                options = [option for option in options if option in lane]
+
+        enterable = [
+            option
+            for option in options
+            if self.can_enter_tile(option, mover=customer)
+        ]
+        if not enterable:
+            return preferred_step
+
+        if (
+            preferred_step in enterable
+            and self.count_customers_on_tile(preferred_step, exclude_customer=customer) == 0
+        ):
+            return preferred_step
+
+        empty_options = [
+            option
+            for option in enterable
+            if self.count_customers_on_tile(option, exclude_customer=customer) == 0
+        ]
+        if empty_options:
+            return min(
+                empty_options,
+                key=lambda option: (
+                    manhattan(option, target),
+                    manhattan(option, preferred_step),
+                    self.random.random(),
+                ),
+            )
+
+        if preferred_step in enterable:
+            return preferred_step
+
+        return min(
+            enterable,
+            key=lambda option: (
+                self.count_customers_on_tile(option, exclude_customer=customer),
+                manhattan(option, target),
+                self.random.random(),
+            ),
         )
 
     def checkout_queue_length_at(self, checkout_pos: Position) -> int:
@@ -801,6 +949,16 @@ class StoreModel(Model):
         )
 
     @property
+    def checkout_bound_shopper_count(self) -> int:
+        return sum(
+            1
+            for customer in self.customers
+            if customer.arrived
+            and not customer.completed
+            and getattr(customer, "should_head_to_checkout", False)
+        )
+
+    @property
     def active_shopper_share(self) -> float:
         return self.active_shopper_count / self.num_shoppers
 
@@ -811,6 +969,14 @@ class StoreModel(Model):
     @property
     def current_time_label(self) -> str:
         return self._format_hour(self.current_store_hour)
+
+    @property
+    def checkout_cutoff_active(self) -> bool:
+        return self.current_store_hour >= self.checkout_cutoff_hour
+
+    @property
+    def checkout_cutoff_time_label(self) -> str:
+        return self._format_hour(self.checkout_cutoff_hour)
 
     @property
     def current_traffic_segment(self) -> TrafficPeriod:
@@ -865,6 +1031,26 @@ class StoreModel(Model):
         return sum(len(customer.abandoned_items) for customer in self.customers)
 
     @property
+    def completed_shopping_list_count(self) -> int:
+        return sum(
+            1
+            for customer in self.customers
+            if customer.shopping_list and customer.planned_completion_rate >= 1.0
+        )
+
+    @property
+    def incomplete_shopping_list_count(self) -> int:
+        return self.shoppers_with_shopping_lists_count - self.completed_shopping_list_count
+
+    @property
+    def shoppers_with_shopping_lists_count(self) -> int:
+        return sum(1 for customer in self.customers if customer.shopping_list)
+
+    @property
+    def unplanned_purchase_count(self) -> int:
+        return self.impulse_purchase_count
+
+    @property
     def avg_completion_time(self) -> float:
         completed_times = [
             customer.completion_time
@@ -884,7 +1070,12 @@ class StoreModel(Model):
 
     @property
     def avg_planned_completion(self) -> float:
-        return mean(customer.planned_completion_rate for customer in self.customers)
+        list_shoppers = [
+            customer
+            for customer in self.customers
+            if customer.shopping_list
+        ]
+        return mean(customer.planned_completion_rate for customer in list_shoppers) if list_shoppers else 0.0
 
     @property
     def avg_satisfaction(self) -> float:
@@ -943,21 +1134,31 @@ class StoreModel(Model):
         return len({
             self._shopping_list_key(customer.shopping_list)
             for customer in self.customers
+            if customer.shopping_list
         })
+
+    @property
+    def sale_item_count_actual(self) -> int:
+        return sum(1 for item in self.layout.items if item.promotion)
+
+    @property
+    def avg_sale_discount(self) -> float:
+        sale_items = [item for item in self.layout.items if item.promotion]
+        return mean(item.discount_rate for item in sale_items) if sale_items else 0.0
 
     @property
     def layout_score(self) -> float:
         completion_component = self.finished_shopper_count / self.num_shoppers
         abandonment_component = 1.0 - self.abandoned_shopper_count / self.num_shoppers
-        profit_component = min(1.0, self.avg_profit_per_customer / 10.0)
+        unplanned_component = min(1.0, self.unplanned_purchase_count / max(1, self.num_shoppers))
         congestion_component = max(0.0, 1.0 - self.avg_congestion_delay / max(1, self.max_steps))
         score = (
             completion_component * 0.30
-            + self.avg_planned_completion * 0.15
+            + self.avg_planned_completion * 0.25
             + self.avg_satisfaction * 0.20
-            + profit_component * 0.20
-            + abandonment_component * 0.10
+            + abandonment_component * 0.15
             + congestion_component * 0.05
+            + unplanned_component * 0.05
         )
         return max(0.0, min(100.0, score * 100))
 
@@ -978,6 +1179,18 @@ class StoreModel(Model):
             "layout": self.layout_name,
             "shoppers": self.num_shoppers,
             "cashiers": self.num_cashiers,
+            "promotion_level": round(self.promotion_level, 3),
+            "promotion_level_percentage": round(self.promotion_level * 100, 1),
+            "sale_item_count_setting": (
+                self.sale_item_count if self.sale_item_count is not None else ""
+            ),
+            "sale_items": self.sale_item_count_actual,
+            "sale_discount_min_percentage": round(self.sale_discount_min * 100, 1),
+            "sale_discount_max_percentage": round(self.sale_discount_max * 100, 1),
+            "avg_sale_discount_percentage": round(self.avg_sale_discount * 100, 1),
+            "shopping_list_max_setting": (
+                self.shopping_list_size if self.shopping_list_size is not None else ""
+            ),
             "avg_cashier_service_minutes": round(
                 mean(self.cashier_service_minutes.values()),
                 2,
@@ -989,6 +1202,8 @@ class StoreModel(Model):
             "opening_time": self._format_hour(self.opening_hour),
             "closing_time": self._format_hour(self.closing_hour),
             "current_store_time": self.current_time_label,
+            "checkout_cutoff_time": self.checkout_cutoff_time_label,
+            "checkout_cutoff_active": self.checkout_cutoff_active,
             "traffic_period": self.current_traffic_period,
             "traffic_share": round(self.current_traffic_share, 3),
             "target_active_shoppers": self.target_active_shopper_count,
@@ -996,11 +1211,15 @@ class StoreModel(Model):
             "traffic_profile": self.traffic_profile_summary,
             "arrival_window_steps": self.arrival_window_steps,
             "unique_shopping_lists": self.unique_shopping_list_count,
+            "shoppers_with_shopping_lists": self.shoppers_with_shopping_lists_count,
             "steps_run": self.step_count,
             "arrived_shoppers": self.arrived_shopper_count,
             "waiting_shoppers": self.waiting_shopper_count,
+            "checkout_bound_shoppers": self.checkout_bound_shopper_count,
             "finished_shoppers": self.finished_shopper_count,
             "abandoned_shoppers": self.abandoned_shopper_count,
+            "completed_shopping_lists": self.completed_shopping_list_count,
+            "incomplete_shopping_lists": self.incomplete_shopping_list_count,
             "crowded_tiles": self.crowded_tile_count,
             "tile_capacity_blocks": self.tile_capacity_blocks,
             "completion_rate": round(completion_rate, 3),
@@ -1018,6 +1237,7 @@ class StoreModel(Model):
             "longest_checkout_queue": self.longest_checkout_queue,
             "planned_purchases": self.planned_purchase_count,
             "impulse_purchases": self.impulse_purchase_count,
+            "unplanned_purchases": self.unplanned_purchase_count,
             "unlisted_purchases": self.unlisted_purchase_count,
             "abandoned_list_items": self.abandoned_list_item_count,
             "lost_revenue_from_abandonment": round(self.lost_revenue_from_abandonment, 2),
@@ -1060,6 +1280,10 @@ class StoreModel(Model):
                     "category": item.category,
                     "configured_list_probability": round(item.list_probability, 3),
                     "configured_list_percentage": item.list_probability_percent,
+                    "on_sale": item.promotion,
+                    "discount_percentage": item.discount_percent,
+                    "regular_price": round(item.price, 2),
+                    "sale_price": item.sale_price,
                     "listed_shoppers": listed_shoppers,
                     "observed_list_percentage": round(
                         listed_shoppers / self.num_shoppers * 100,

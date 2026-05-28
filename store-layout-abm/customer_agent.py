@@ -72,13 +72,15 @@ SHOPPER_PROFILES = {
 class CustomerAgent(Agent):
     """Shopper agent with planned-list and impulse-purchase behavior."""
 
-    PATIENCE_TIME_COST_MULTIPLIER = 0.65
+    PATIENCE_TIME_COST_MULTIPLIER = 0.35
     PATIENCE_TRAFFIC_COST_PER_SHOPPER = 0.10
     MAX_TRAFFIC_PATIENCE_COST = 0.80
     PATIENCE_CONGESTION_DELAY_MULTIPLIER = 0.75
     SAME_TILE_CROWDING_COST_PER_SHOPPER = 0.42
     BLOCKED_TILE_PATIENCE_MULTIPLIER = 0.90
     CHECKOUT_PATIENCE_FRACTION = 0.45
+    LOW_PATIENCE_CHECKOUT_THRESHOLD = 0.40
+    QUEUE_PATIENCE_COST_MULTIPLIER = 0.55
 
     def __init__(
         self,
@@ -127,6 +129,7 @@ class CustomerAgent(Agent):
         self.checkout_wait_initial_minutes = 0.0
         self.checkout_time_spent = 0
         self.checkout_position = None
+        self.force_checkout = False
         self.completed = False
         self.completion_time: Optional[int] = None
         self.completion_minutes: Optional[float] = None
@@ -159,9 +162,26 @@ class CustomerAgent(Agent):
             return
 
         self.time_spent += 1
-        time_cost = self.model.minutes_per_step * self.PATIENCE_TIME_COST_MULTIPLIER
+        if self.model.checkout_cutoff_active and self.state == "shopping":
+            self.force_checkout = True
+        if self.state == "shopping" and self.patience_ratio < self.LOW_PATIENCE_CHECKOUT_THRESHOLD:
+            self.force_checkout = True
+
+        if self.state == "checkout":
+            time_cost = 0.0
+        elif self._waiting_in_checkout_line() and not self._near_cashier():
+            queue_cost = self.model.minutes_per_step * self.QUEUE_PATIENCE_COST_MULTIPLIER
+            if self._reduce_checkout_patience(queue_cost):
+                return
+            time_cost = 0.0
+        elif self.force_checkout:
+            time_cost = 0.0
+        else:
+            time_cost = self.model.minutes_per_step * self.PATIENCE_TIME_COST_MULTIPLIER
         if self._reduce_patience(time_cost, "time"):
             return
+        if self.state == "shopping" and self.patience_ratio < self.LOW_PATIENCE_CHECKOUT_THRESHOLD:
+            self.force_checkout = True
 
         if self._apply_same_tile_crowding():
             return
@@ -182,7 +202,7 @@ class CustomerAgent(Agent):
 
         self._interact_with_visible_items()
 
-        if not self.remaining_items and self.model.layout.is_checkout(self.pos):
+        if self.should_head_to_checkout and self.model.layout.is_checkout(self.pos):
             self._enter_checkout()
 
     def _reduce_patience(self, amount: float, reason: str) -> bool:
@@ -190,11 +210,7 @@ class CustomerAgent(Agent):
             return False
 
         if self.state == "checkout":
-            self.checkout_patience_level = max(0.0, self.checkout_patience_level - amount)
-            if self.checkout_patience_level <= 0:
-                self._abandon_shopping("checkout")
-                return True
-            return False
+            return self._reduce_checkout_patience(amount)
 
         if self.state != "shopping":
             return False
@@ -204,9 +220,37 @@ class CustomerAgent(Agent):
             self.patience_lost_to_congestion += amount
 
         if self.patience_level <= 0:
+            if self.basket_records and reason in {"time", "traffic", "congestion"}:
+                self.force_checkout = True
+                self.patience_level = 1.0
+                return False
             self._abandon_shopping(reason)
             return True
+        if self.patience_ratio < self.LOW_PATIENCE_CHECKOUT_THRESHOLD:
+            self.force_checkout = True
         return False
+
+    def _reduce_checkout_patience(self, amount: float) -> bool:
+        if self.completed or amount <= 0 or self._near_cashier():
+            return False
+
+        self.checkout_patience_level = max(0.0, self.checkout_patience_level - amount)
+        if self.checkout_patience_level <= 0:
+            self._abandon_shopping("checkout")
+            return True
+        return False
+
+    def _waiting_in_checkout_line(self) -> bool:
+        return self.model.layout.checkout_for_queue_cell(self.pos) is not None
+
+    def _near_cashier(self) -> bool:
+        if self.model.layout.is_checkout(self.pos):
+            return True
+        checkout_pos = self.model.layout.checkout_for_queue_cell(self.pos)
+        if checkout_pos is None:
+            return False
+        lane = self.model.layout.checkout_queue_cells.get(checkout_pos, [])
+        return bool(lane and self.pos == lane[0])
 
     def _abandon_shopping(self, reason: str) -> None:
         if self.completed:
@@ -249,8 +293,18 @@ class CustomerAgent(Agent):
         return self._reduce_patience(crowding_cost, "congestion")
 
     def _choose_target(self):
-        if not self.remaining_items:
+        if self.should_head_to_checkout:
             return self.model.checkout_target_for(self)
+
+        if self.shopper_type == "browser":
+            if self.model.random.random() < 0.65 and self.model.layout.hot_zones:
+                return self.model.random.choice(list(self.model.layout.hot_zones))
+            browsing_cells = (
+                self.model.layout.passable
+                - set(self.model.layout.checkout_positions)
+                - self.model.layout.all_checkout_queue_cells
+            )
+            return self.model.random.choice(list(browsing_cells or self.model.layout.passable))
 
         if self.shopper_type == "bargain_hunter":
             promoted = [
@@ -263,9 +317,6 @@ class CustomerAgent(Agent):
                 item = self.model.layout.nearest_item(promoted, self.pos)
                 if item:
                     return item.location
-
-        if self.shopper_type == "browser" and self.model.random.random() < 0.22:
-            return self.model.random.choice(list(self.model.layout.hot_zones))
 
         item = self.model.layout.nearest_item(self.remaining_items, self.pos)
         if item is None:
@@ -302,6 +353,7 @@ class CustomerAgent(Agent):
             exploration_rate=self.profile.exploration_rate,
             familiarity=self.profile.familiarity,
         )
+        step = self.model.preferred_movement_step(self, target, step)
         if step != self.pos:
             if not self.model.can_enter_tile(step, mover=self):
                 self.congestion_delay += 1
@@ -403,6 +455,14 @@ class CustomerAgent(Agent):
             self.state = "finished"
             self.completion_time = self.time_spent
             self.completion_minutes = round(self.time_spent * self.model.minutes_per_step, 2)
+
+    @property
+    def should_head_to_checkout(self) -> bool:
+        return self.force_checkout or (bool(self.shopping_list) and not self.remaining_items)
+
+    @property
+    def patience_ratio(self) -> float:
+        return self.patience_level / max(1.0, self.max_patience)
 
     @property
     def planned_completion_rate(self) -> float:
