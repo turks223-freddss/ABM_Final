@@ -72,7 +72,7 @@ SHOPPER_PROFILES = {
 class CustomerAgent(Agent):
     """Shopper agent with planned-list and impulse-purchase behavior."""
 
-    PATIENCE_TIME_COST_MULTIPLIER = 0.35
+    PATIENCE_TIME_COST_MULTIPLIER = 0.0
     PATIENCE_TRAFFIC_COST_PER_SHOPPER = 0.10
     MAX_TRAFFIC_PATIENCE_COST = 0.80
     PATIENCE_CONGESTION_DELAY_MULTIPLIER = 0.75
@@ -81,6 +81,7 @@ class CustomerAgent(Agent):
     CHECKOUT_PATIENCE_FRACTION = 0.45
     LOW_PATIENCE_CHECKOUT_THRESHOLD = 0.40
     QUEUE_PATIENCE_COST_MULTIPLIER = 0.55
+    SEEN_ITEM_NOTICE_MULTIPLIER = 0.30
 
     def __init__(
         self,
@@ -133,6 +134,7 @@ class CustomerAgent(Agent):
         self.loop_entry_released = False
         self.following_loop_entry_route = False
         self.following_recent_purchase_exit = False
+        self.following_list_route = False
         self.recent_purchase_location = None
         self.move_away_steps_remaining = 0
         self.completed = False
@@ -169,7 +171,7 @@ class CustomerAgent(Agent):
         self.time_spent += 1
         if self.model.checkout_cutoff_active and self.state == "shopping":
             self.force_checkout = True
-        if self.state == "shopping" and self.patience_ratio < self.LOW_PATIENCE_CHECKOUT_THRESHOLD:
+        if self.state == "shopping" and self.patience_ratio < self.patience_checkout_threshold:
             self.force_checkout = True
 
         if self.state == "checkout":
@@ -185,7 +187,7 @@ class CustomerAgent(Agent):
             time_cost = self.model.minutes_per_step * self.PATIENCE_TIME_COST_MULTIPLIER
         if self._reduce_patience(time_cost, "time"):
             return
-        if self.state == "shopping" and self.patience_ratio < self.LOW_PATIENCE_CHECKOUT_THRESHOLD:
+        if self.state == "shopping" and self.patience_ratio < self.patience_checkout_threshold:
             self.force_checkout = True
 
         if self._apply_same_tile_crowding():
@@ -231,7 +233,7 @@ class CustomerAgent(Agent):
                 return False
             self._abandon_shopping(reason)
             return True
-        if self.patience_ratio < self.LOW_PATIENCE_CHECKOUT_THRESHOLD:
+        if self.patience_ratio < self.patience_checkout_threshold:
             self.force_checkout = True
         return False
 
@@ -300,6 +302,7 @@ class CustomerAgent(Agent):
     def _choose_target(self):
         self.following_loop_entry_route = False
         self.following_recent_purchase_exit = False
+        self.following_list_route = False
         if self.should_head_to_checkout:
             return self.model.checkout_target_for(self)
 
@@ -308,12 +311,20 @@ class CustomerAgent(Agent):
             self.following_loop_entry_route = True
             return loop_entry_target
 
+        list_target = self._nearest_target_item(self.items_left_to_find)
+        if list_target is not None:
+            self.following_list_route = True
+            return list_target.location
+
         move_away_target = self._move_away_from_recent_purchase_target()
         if move_away_target is not None:
             self.following_recent_purchase_exit = True
             return move_away_target
 
         if self.shopper_type == "browser":
+            unseen_item = self._nearest_unseen_browsing_item()
+            if unseen_item is not None and self.model.random.random() < 0.70:
+                return unseen_item.location
             if self.model.random.random() < 0.65 and self.model.layout.hot_zones:
                 return self.model.random.choice(list(self.model.layout.hot_zones))
             browsing_cells = (
@@ -323,26 +334,28 @@ class CustomerAgent(Agent):
             )
             return self.model.random.choice(list(browsing_cells or self.model.layout.passable))
 
-        if self.shopper_type == "bargain_hunter":
-            promoted = [
-                name
-                for name in self.items_left_to_find
-                if self.model.layout.items_by_name.get(name)
-                and self.model.layout.items_by_name[name].promotion
-            ]
-            if promoted:
-                item = self.model.layout.nearest_item(promoted, self.pos)
-                if item:
-                    return item.location
+        return self.model.checkout_target_for(self)
 
-        item = self.model.layout.nearest_item(self.items_left_to_find, self.pos)
-        if item is None:
-            return self.model.checkout_target_for(self)
+    def _nearest_target_item(self, item_names: List[str]) -> Optional[StoreItem]:
+        if not item_names:
+            return None
 
-        if self.model.random.random() > self.profile.familiarity:
-            zone = self.model.layout.zone_centers.get(item.category)
-            return zone or item.location
-        return item.location
+        unseen_names = [
+            name
+            for name in item_names
+            if name not in self.seen_item_names
+        ]
+        return self.model.layout.nearest_item(unseen_names or item_names, self.pos)
+
+    def _nearest_unseen_browsing_item(self) -> Optional[StoreItem]:
+        unseen_names = [
+            item.name
+            for item in self.model.layout.items
+            if item.category != "checkout"
+            and item.name not in self.bought_item_names
+            and item.name not in self.seen_item_names
+        ]
+        return self.model.layout.nearest_item(unseen_names, self.pos)
 
     def _move_away_from_recent_purchase_target(self):
         if (
@@ -435,22 +448,34 @@ class CustomerAgent(Agent):
         return False
 
     def _interact_with_visible_items(self) -> None:
-        for item in self.model.layout.nearby_items(self.pos, self.profile.exposure_radius):
+        visible_items = sorted(
+            self.model.layout.nearby_items(self.pos, self.profile.exposure_radius),
+            key=lambda item: item.name in self.seen_item_names,
+        )
+        for item in visible_items:
             if item.name in self.bought_item_names:
                 continue
 
             distance = manhattan(self.pos, item.location)
+            if item.name in self.remaining_items:
+                if item.name not in self.seen_item_names:
+                    self.exposure_count += 1
+                    self.seen_item_names.add(item.name)
+                self._buy_item(item, planned=True)
+                continue
+
+            already_seen = item.name in self.seen_item_names
             noticed = item.visibility / (1 + distance)
+            if already_seen:
+                noticed *= self.SEEN_ITEM_NOTICE_MULTIPLIER
             if self.model.random.random() > noticed:
                 continue
 
-            if item.name not in self.seen_item_names:
+            if not already_seen:
                 self.exposure_count += 1
                 self.seen_item_names.add(item.name)
 
-            if item.name in self.remaining_items:
-                self._buy_item(item, planned=True)
-            elif self._will_buy_impulse(item, distance):
+            if self._will_buy_impulse(item, distance):
                 self._buy_item(item, planned=False)
 
     def _will_buy_impulse(self, item: StoreItem, distance: int) -> bool:
@@ -530,8 +555,20 @@ class CustomerAgent(Agent):
         return self.force_checkout or (bool(self.shopping_list) and not self.remaining_items)
 
     @property
+    def patience_checkout_threshold(self) -> float:
+        return getattr(
+            self.model,
+            "patience_threshold",
+            self.LOW_PATIENCE_CHECKOUT_THRESHOLD,
+        )
+
+    @property
     def following_forced_route(self) -> bool:
-        return self.following_loop_entry_route or self.following_recent_purchase_exit
+        return (
+            self.following_loop_entry_route
+            or self.following_recent_purchase_exit
+            or self.following_list_route
+        )
 
     @property
     def items_left_to_find(self) -> List[str]:

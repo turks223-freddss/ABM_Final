@@ -121,6 +121,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Maximum number of items per non-browser shopper list. Minimum is always 1. Browser shoppers have no planned list.",
     )
     parser.add_argument(
+        "--patience-threshold",
+        type=parse_rate,
+        default=0.40,
+        help="Patience ratio where shoppers stop searching and head to checkout. Range: 0.20 to 0.50.",
+    )
+    parser.add_argument(
         "--shopper-mix",
         type=parse_shopper_mix,
         default=None,
@@ -192,6 +198,8 @@ def main() -> None:
         parser.error("--cashiers must be positive.")
     if args.shopping_list_size is not None and args.shopping_list_size <= 0:
         parser.error("--shopping-list-size must be positive.")
+    if not 0.20 <= args.patience_threshold <= 0.50:
+        parser.error("--patience-threshold must be between 0.20 and 0.50.")
     if args.runs is not None and args.runs <= 0:
         parser.error("--runs must be positive.")
     if args.closing_hour <= args.opening_hour:
@@ -210,6 +218,7 @@ def main() -> None:
             promotion_level=args.promotion_level,
             shopper_mix=args.shopper_mix,
             shopping_list_size=args.shopping_list_size,
+            patience_threshold=args.patience_threshold,
             sale_item_count=args.sale_items,
             sale_discount_min=args.sale_discount_min,
             sale_discount_max=args.sale_discount_max,
@@ -234,6 +243,7 @@ def main() -> None:
         promotion_level=args.promotion_level,
         shopper_mix=args.shopper_mix,
         shopping_list_size=args.shopping_list_size,
+        patience_threshold=args.patience_threshold,
         sale_item_count=args.sale_items,
         sale_discount_min=args.sale_discount_min,
         sale_discount_max=args.sale_discount_max,

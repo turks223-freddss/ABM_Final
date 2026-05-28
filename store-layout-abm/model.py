@@ -57,6 +57,7 @@ class StoreModel(Model):
         promotion_level: float = 0.25,
         shopper_mix: Optional[Dict[str, float]] = None,
         shopping_list_size: int | str | None = None,
+        patience_threshold: float | str = 0.40,
         sale_item_count: int | str | None = None,
         sale_discount_min: float = 0.20,
         sale_discount_max: float = 0.30,
@@ -67,7 +68,8 @@ class StoreModel(Model):
         browser_percent: float | str | None = None,
         opening_hour: float = 9.0,
         closing_hour: float = 21.0,
-        checkout_cutoff_hour: float = 20.0,
+        checkout_cutoff_hour: float | None = None,
+        last_arrival_hour: float | None = None,
         traffic_profile: Optional[List[TrafficPeriod]] = None,
         seed: Optional[int] = None,
     ) -> None:
@@ -85,6 +87,12 @@ class StoreModel(Model):
         self.shopping_list_size = self._coerce_optional_positive_int(
             shopping_list_size,
             "shopping_list_size",
+        )
+        self.patience_threshold = self._coerce_bounded_rate(
+            patience_threshold,
+            "patience_threshold",
+            0.20,
+            0.50,
         )
         self.sale_item_count = self._coerce_optional_nonnegative_int(
             sale_item_count,
@@ -112,9 +120,21 @@ class StoreModel(Model):
         self.max_steps = max_steps
         self.opening_hour = float(opening_hour)
         self.closing_hour = float(closing_hour)
+        self.last_arrival_hour = self._coerce_store_hour(
+            last_arrival_hour,
+            default=max(self.opening_hour, self.closing_hour - 2.0),
+            name="last_arrival_hour",
+        )
         self.checkout_cutoff_hour = min(
             self.closing_hour,
-            max(self.opening_hour, float(checkout_cutoff_hour)),
+            max(
+                self.opening_hour,
+                float(
+                    checkout_cutoff_hour
+                    if checkout_cutoff_hour is not None
+                    else self.closing_hour - 0.5
+                ),
+            ),
         )
         self.minutes_per_step = self._minutes_per_step()
         self.step_count = 0
@@ -323,6 +343,16 @@ class StoreModel(Model):
             parsed /= 100.0
         return max(0.0, min(1.0, parsed))
 
+    def _coerce_bounded_rate(
+        self,
+        value: float | str,
+        name: str,
+        minimum: float,
+        maximum: float,
+    ) -> float:
+        parsed = self._coerce_rate(value, name)
+        return max(minimum, min(maximum, parsed))
+
     def _normalize_rate_range(
         self,
         minimum: float | str,
@@ -364,7 +394,22 @@ class StoreModel(Model):
         return (self.closing_hour - self.opening_hour) * 60 / self.max_steps
 
     def _default_arrival_window(self) -> int:
-        return self.max_steps
+        return self._hour_to_step(self.last_arrival_hour)
+
+    def _coerce_store_hour(
+        self,
+        value: float | str | None,
+        default: float,
+        name: str,
+    ) -> float:
+        if value is None:
+            parsed = default
+        else:
+            try:
+                parsed = float(value)
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"{name} must be a store hour.") from exc
+        return min(self.closing_hour, max(self.opening_hour, parsed))
 
     def _default_traffic_profile(self) -> List[TrafficPeriod]:
         open_duration = self.closing_hour - self.opening_hour
@@ -425,12 +470,21 @@ class StoreModel(Model):
 
     def _arrival_times_from_traffic_profile(self) -> List[int]:
         arrival_times: List[int] = []
+        last_arrival_step = self._hour_to_step(self.last_arrival_hour)
         for period, count in zip(self.traffic_profile, self._traffic_segment_counts()):
             if count <= 0:
                 continue
 
-            start_step = self._hour_to_step(period.start_hour)
-            arrival_times.extend([start_step] * count)
+            start_step = min(self._hour_to_step(period.start_hour), last_arrival_step)
+            end_step = min(self._hour_to_step(period.end_hour), last_arrival_step)
+            if end_step <= start_step or count == 1:
+                arrival_times.extend([start_step] * count)
+                continue
+
+            for index in range(count):
+                fraction = (index + self.random.random()) / count
+                arrival_step = start_step + round(fraction * (end_step - start_step))
+                arrival_times.append(min(arrival_step, last_arrival_step))
 
         return sorted(arrival_times)
 
@@ -517,15 +571,21 @@ class StoreModel(Model):
         return sequence
 
     def _activate_arrivals(self) -> None:
-        available_slots = self.target_active_shopper_count - self.active_shopper_count
-        if available_slots <= 0:
-            return
-
         eligible_customers = [
             customer
             for customer in self.customers
             if not customer.arrived and customer.arrival_time <= self.step_count
         ]
+        if not eligible_customers:
+            return
+
+        if self.step_count >= self.arrival_window_steps:
+            available_slots = len(eligible_customers)
+        else:
+            available_slots = self.target_active_shopper_count - self.active_shopper_count
+            if available_slots <= 0:
+                return
+
         self.random.shuffle(eligible_customers)
         entered = 0
         for customer in eligible_customers:
@@ -652,12 +712,11 @@ class StoreModel(Model):
             customer.step()
 
         self.datacollector.collect(self)
-        if self.step_count >= self.max_steps or self.incomplete_shopper_count == 0:
+        if self.incomplete_shopper_count == 0:
             self.running = False
 
     def run_model(self, max_steps: Optional[int] = None) -> None:
-        target_steps = max_steps or self.max_steps
-        while self.running and self.step_count < target_steps:
+        while self.running and (max_steps is None or self.step_count < max_steps):
             self.step()
 
     def _category_bucket(self, category: str) -> Dict[str, float]:
@@ -1080,6 +1139,7 @@ class StoreModel(Model):
             1
             for customer in self.customers
             if customer.shopping_list and customer.planned_completion_rate >= 1.0
+            and customer.state == "finished"
         )
 
     @property
@@ -1235,6 +1295,8 @@ class StoreModel(Model):
             "shopping_list_max_setting": (
                 self.shopping_list_size if self.shopping_list_size is not None else ""
             ),
+            "patience_threshold": round(self.patience_threshold, 3),
+            "patience_threshold_percentage": round(self.patience_threshold * 100, 1),
             "avg_cashier_service_minutes": round(
                 mean(self.cashier_service_minutes.values()),
                 2,
@@ -1245,6 +1307,7 @@ class StoreModel(Model):
             "max_tile_capacity": self.TILE_MAX_CAPACITY,
             "opening_time": self._format_hour(self.opening_hour),
             "closing_time": self._format_hour(self.closing_hour),
+            "last_arrival_time": self._format_hour(self.last_arrival_hour),
             "current_store_time": self.current_time_label,
             "checkout_cutoff_time": self.checkout_cutoff_time_label,
             "checkout_cutoff_active": self.checkout_cutoff_active,

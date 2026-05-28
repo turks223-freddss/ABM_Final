@@ -30,7 +30,7 @@ Product categories are assigned by shelf coordinates. The default categories are
 
 The front service area contains entrances, cashier tiles, queue lanes, and checkout separators. Each cashier has three dedicated queue tiles marked `Q`. Checkout separator cells span from the cashier row down to the end of the queue line and are treated as checkout product/display cells, which separates cashier lanes while still creating checkout exposure.
 
-Products have category, price, visibility, sale status, discount, essential status, and list probability. Promotions are assigned either by `promotion_level` or by an exact `sale_item_count`. Sale discounts are sampled within the configured discount range. Products in hot zones and checkout shelves receive higher visibility.
+Products have category, price, visibility, sale status, discount, essential status, and list probability. Promotions are assigned either by `promotion_level` or by an exact `sale_item_count`. Sale discounts use the model's default internal range. Products in hot zones and checkout shelves receive higher visibility.
 
 The environment tracks tile crowding. Two shoppers can share a tile without penalty. Three or four shoppers on a tile create same-tile crowding costs. A tile will not accept a fifth shopper, so blocked shoppers wait, lose patience, and increment the tile-capacity block metric.
 
@@ -44,7 +44,7 @@ By default, each simulation day represents a store open from 9:00 AM to 9:00 PM.
 - 11:00 AM-2:00 PM: 20%
 - 2:00 PM-5:00 PM: 35%
 - 5:00 PM-7:00 PM: 25%
-- 7:00 PM-9:00 PM: 10%
+- 7:00 PM: remaining 10% final scheduled shopper arrivals
 
 The default command-line and live-dashboard population is 400 shoppers so the compact grid stays responsive. A full-size supermarket benchmark is closer to 2,225 in-store transactions per day, derived from FMI's 2024 average weekly supermarket sales and in-store sales per transaction. You can enter any positive whole number in the live dashboard's daily shopper population field, or pass any positive value to `--shoppers` on the command line.
 
@@ -52,7 +52,7 @@ The live dashboard and timeseries CSV include store time, traffic period, target
 
 In the live dashboard, hover over shopper, product, cashier, and queue tiles for quick details. Click a shopper to track their basket, shopping list, patience, state, and movement stats. Click a product shelf to inspect item details, or click a cashier/queue lane to inspect queue length and randomized cashier checkout speed.
 
-At 8:00 PM, all active shoppers stop searching for remaining list items and start moving toward checkout. Shoppers that have not arrived yet still follow the normal admission rule until closing.
+At 7:00 PM, no new shoppers are scheduled to arrive. At 8:30 PM, all active shoppers stop searching for remaining list items and start moving toward checkout. The simulation clock reaches closing at 9:00 PM, but the model keeps stepping until shoppers have cleared checkout or otherwise completed their trip.
 
 ## Agent Behavior
 
@@ -72,13 +72,13 @@ Shopping lists are generated from listable, non-checkout products. Each product 
 
 Browser shoppers do not receive planned shopping lists. They browse through hot zones and open aisles, buy noticed items through the unplanned-purchase logic, and only head to checkout when patience or the store cutoff pushes them there.
 
-At each step, an arrived shopper updates patience, checks crowding, interacts with visible items, chooses a target, and moves one tile if possible. Bargain hunters prioritize remaining list items that are on promotion. Browsers sometimes target hot zones. Other shoppers usually target the nearest remaining list item, but lower familiarity can make them move toward the category zone instead of the exact item.
+At each step, an arrived shopper updates patience, checks crowding, interacts with visible items, chooses a target, and moves one tile if possible. Shoppers with planned shopping lists prioritize the nearest remaining list item with direct, low-exploration routing until the list is complete. Browser shoppers have no planned list and can target unseen products, hot zones, or open aisles.
 
-A shopper buys a planned item when it is visible and appears on the remaining shopping list. A shopper can also make an unplanned purchase after noticing a visible item. Unplanned purchasing is more likely for snacks, checkout items, bakery, frozen goods, promoted items, high-exposure items, and shoppers with higher impulse probability. Loop layouts slightly increase impulse probability, while grid layouts slightly reduce it.
+A shopper buys a planned item when it is visible and appears on the remaining shopping list. A shopper can also make an unplanned purchase after noticing a visible item. Once an item has already been viewed, shoppers are less likely to focus on it again and are more likely to continue toward unseen items, but it can still be bought when it remains in line of sight. Unplanned purchasing is more likely for snacks, checkout items, bakery, frozen goods, promoted items, high-exposure items, and shoppers with higher impulse probability. Loop layouts slightly increase impulse probability, while grid layouts slightly reduce it.
 
-Patience is tracked in approximate minutes. Normal shopping consumes patience over time. Nearby traffic, congestion delay, same-tile crowding, and blocked movement consume additional patience. If a shopper still has a basket when patience reaches zero from time or congestion, they try to go to checkout instead of immediately abandoning.
+Patience is tracked in approximate minutes. Normal walking and shopping do not consume baseline patience. Nearby traffic, congestion delay, same-tile crowding, blocked movement, and checkout-line waiting can still consume patience. If a shopper still has a basket when patience reaches zero from congestion, they try to go to checkout instead of immediately abandoning.
 
-When a shopper's remaining patience drops below 40%, they stop searching for remaining list items and begin moving toward the cashier lanes. Shoppers can still abandon while waiting farther back in a checkout line if checkout patience runs out. Once a shopper reaches the front queue tile or cashier tile, they stay and complete checkout.
+When a shopper's remaining patience drops below the configured threshold, they stop searching for remaining list items and begin moving toward the cashier lanes. Shoppers can still abandon while waiting farther back in a checkout line if checkout patience runs out. Once a shopper reaches the front queue tile or cashier tile, they stay and complete checkout.
 
 Checkout starts when a shopper reaches their assigned cashier tile. Each cashier has a randomized service speed. Checkout wait is estimated from the cashier queue length and service time. Purchases are recorded only after checkout finishes; shoppers who abandon before payment keep their abandoned basket and remaining list as abandoned items.
 
@@ -208,7 +208,7 @@ Then open the local URL printed in the terminal, usually:
 http://localhost:8765
 ```
 
-Use the sidebar to change the layout, shopper count, cashier count, max shopping-list size, shopper-type percentages, promotion level, exact sale item count, sale discount range, seed, and speed. Click `Reset` after changing model parameters, then click Play.
+Use the sidebar to change the layout, shopper count, cashier count, max shopping-list size, patience threshold, shopper-type percentages, promotion level, exact sale item count, seed, and speed. Click `Reset` after changing model parameters, then click Play.
 
 On Windows you can also run:
 
@@ -249,7 +249,7 @@ This compares grid, loop, and free-flow layouts across low, medium, and high sho
 python main.py --help
 python main.py --experiment --layouts grid,loop --densities 30,60 --runs 10
 python main.py --layout loop --promotion-level 0.40 --no-plots
-python main.py --layout grid --shopping-list-size 8 --shopper-mix mission_driven=30,bargain_hunter=20,impulse_buyer=20,loyal_shopper=20,browser=10 --sale-items 25 --sale-discount-min 20 --sale-discount-max 30
+python main.py --layout grid --shopping-list-size 8 --patience-threshold 0.35 --shopper-mix mission_driven=30,bargain_hunter=20,impulse_buyer=20,loyal_shopper=20,browser=10 --sale-items 25
 ```
 
 ## File Guide

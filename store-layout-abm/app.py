@@ -692,6 +692,7 @@ def LiveMetrics(model: StoreModel):
 | Metric | Value |
 | --- | ---: |
 | Store time | {summary["current_store_time"]} |
+| Last shopper arrival | {summary["last_arrival_time"]} |
 | Checkout cutoff | {summary["checkout_cutoff_time"]} |
 | Checkout cutoff active | {"Yes" if summary["checkout_cutoff_active"] else "No"} |
 | Traffic period | {summary["traffic_period"]} |
@@ -701,6 +702,7 @@ def LiveMetrics(model: StoreModel):
 | Sale items | {summary["sale_items"]} |
 | Avg. sale discount | {summary["avg_sale_discount_percentage"]:.1f}% |
 | Shopping list max setting | {summary["shopping_list_max_setting"] or "Profile default"} |
+| Patience threshold | {summary["patience_threshold_percentage"]:.0f}% |
 | Finished shoppers | {summary["finished_shoppers"]} / {summary["shoppers"]} |
 | Heading to checkout | {summary["checkout_bound_shoppers"]} |
 | Abandoned shoppers | {summary["abandoned_shoppers"]} / {summary["shoppers"]} |
@@ -996,6 +998,14 @@ model_params = {
         "value": "",
         "label": "Max shopping list items",
     },
+    "patience_threshold": {
+        "type": "SliderFloat",
+        "value": 0.40,
+        "label": "Patience threshold",
+        "min": 0.20,
+        "max": 0.50,
+        "step": 0.05,
+    },
     "promotion_level": {
         "type": "SliderFloat",
         "value": 0.25,
@@ -1008,22 +1018,6 @@ model_params = {
         "type": "InputText",
         "value": "",
         "label": "Exact sale item count",
-    },
-    "sale_discount_min": {
-        "type": "SliderFloat",
-        "value": 0.20,
-        "label": "Min sale discount",
-        "min": 0.0,
-        "max": 0.9,
-        "step": 0.05,
-    },
-    "sale_discount_max": {
-        "type": "SliderFloat",
-        "value": 0.30,
-        "label": "Max sale discount",
-        "min": 0.0,
-        "max": 0.9,
-        "step": 0.05,
     },
     "mission_driven_percent": {
         "type": "SliderFloat",
