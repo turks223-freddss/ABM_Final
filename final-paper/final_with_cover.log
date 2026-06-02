@@ -1,0 +1,472 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026) (preloaded format=pdflatex 2026.5.18)  2 JUN 2026 18:24
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**final_with_cover.tex
+(./final_with_cover.tex
+LaTeX2e <2025-11-01>
+L3 programming layer <2026-04-28>
+(c:/texlive/2026/texmf-dist/tex/latex/base/article.cls
+Document Class: article 2025/01/22 v1.4n Standard LaTeX document class
+(c:/texlive/2026/texmf-dist/tex/latex/base/size10.clo
+File: size10.clo 2025/01/22 v1.4n Standard LaTeX file (size option)
+)
+\c@part=\count276
+\c@section=\count277
+\c@subsection=\count278
+\c@subsubsection=\count279
+\c@paragraph=\count280
+\c@subparagraph=\count281
+\c@figure=\count282
+\c@table=\count283
+\abovecaptionskip=\skip49
+\belowcaptionskip=\skip50
+\bibindent=\dimen150
+)
+(c:/texlive/2026/texmf-dist/tex/latex/pdfpages/pdfpages.sty
+Package: pdfpages 2026/03/30 v0.6h Insert pages of external PDF documents (AM)
+
+(c:/texlive/2026/texmf-dist/tex/latex/base/ifthen.sty
+Package: ifthen 2024/03/16 v1.1e Standard LaTeX ifthen package (DPC)
+)
+(c:/texlive/2026/texmf-dist/tex/latex/tools/calc.sty
+Package: calc 2025/03/01 v4.3b Infix arithmetic (KKT,FJ)
+\calc@Acount=\count284
+\calc@Bcount=\count285
+\calc@Adimen=\dimen151
+\calc@Bdimen=\dimen152
+\calc@Askip=\skip51
+\calc@Bskip=\skip52
+LaTeX Info: Redefining \setlength on input line 86.
+LaTeX Info: Redefining \addtolength on input line 87.
+\calc@Ccount=\count286
+\calc@Cskip=\skip53
+)
+(c:/texlive/2026/texmf-dist/tex/latex/eso-pic/eso-pic.sty
+Package: eso-pic 2025/12/10 v3.0d eso-pic (RN)
+\ESO@tempdima=\dimen153
+\ESO@tempdimb=\dimen154
+
+(c:/texlive/2026/texmf-dist/tex/latex/graphics/keyval.sty
+Package: keyval 2022/05/29 v1.15 key=value parser (DPC)
+\KV@toks@=\toks17
+)
+(c:/texlive/2026/texmf-dist/tex/latex/xcolor/xcolor.sty
+Package: xcolor 2024/09/29 v3.02 LaTeX color extensions (UK)
+
+(c:/texlive/2026/texmf-dist/tex/latex/graphics-cfg/color.cfg
+File: color.cfg 2016/01/02 v1.6 sample color configuration
+)
+Package xcolor Info: Driver file: pdftex.def on input line 274.
+
+(c:/texlive/2026/texmf-dist/tex/latex/graphics-def/pdftex.def
+File: pdftex.def 2025/09/29 v1.2d Graphics/color driver for pdftex
+)
+(c:/texlive/2026/texmf-dist/tex/latex/graphics/mathcolor.ltx)
+Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1349.
+Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1353.
+Package xcolor Info: Model `RGB' extended on input line 1365.
+Package xcolor Info: Model `HTML' substituted by `rgb' on input line 1367.
+Package xcolor Info: Model `Hsb' substituted by `hsb' on input line 1368.
+Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1369.
+Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1370.
+Package xcolor Info: Model `Gray' substituted by `gray' on input line 1371.
+Package xcolor Info: Model `wave' substituted by `hsb' on input line 1372.
+))
+(c:/texlive/2026/texmf-dist/tex/latex/etoolbox/etoolbox.sty
+Package: etoolbox 2025/10/02 v2.5m e-TeX tools for LaTeX (JAW)
+\etb@tempcnta=\count287
+)
+(c:/texlive/2026/texmf-dist/tex/latex/graphics/graphicx.sty
+Package: graphicx 2024/12/31 v1.2e Enhanced LaTeX Graphics (DPC,SPQR)
+
+(c:/texlive/2026/texmf-dist/tex/latex/graphics/graphics.sty
+Package: graphics 2024/08/06 v1.4g Standard LaTeX Graphics (DPC,SPQR)
+
+(c:/texlive/2026/texmf-dist/tex/latex/graphics/trig.sty
+Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
+)
+(c:/texlive/2026/texmf-dist/tex/latex/graphics-cfg/graphics.cfg
+File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
+)
+Package graphics Info: Driver file: pdftex.def on input line 106.
+)
+\Gin@req@height=\dimen155
+\Gin@req@width=\dimen156
+)
+\AM@pagewidth=\dimen157
+\AM@pageheight=\dimen158
+\AM@fboxrule=\dimen159
+
+(c:/texlive/2026/texmf-dist/tex/latex/pdfpages/pppdftex.def
+File: pppdftex.def 2026/03/30 v0.6h Pdfpages driver for pdfTeX (AM)
+)
+\pdfpages@includegraphics@status=\count288
+\AM@pagebox=\box53
+\AM@global@opts=\toks18
+\AM@pagecnt=\count289
+\AM@toc@title=\toks19
+\AM@lof@heading=\toks20
+\c@AM@survey=\count290
+\AM@templatesizebox=\box54
+)
+(c:/texlive/2026/texmf-dist/tex/latex/l3backend/l3backend-pdftex.def
+File: l3backend-pdftex.def 2026-02-18 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count291
+)
+(./final_with_cover.aux)
+\openout1 = `final_with_cover.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 5.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 5.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 5.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 5.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 5.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 5.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 5.
+LaTeX Font Info:    ... okay on input line 5.
+
+(c:/texlive/2026/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count292
+\scratchdimen=\dimen160
+\scratchbox=\box55
+\nofMPsegments=\count293
+\nofMParguments=\count294
+\everyMPshowfont=\toks21
+\MPscratchCnt=\count295
+\MPscratchDim=\dimen161
+\MPnumerator=\count296
+\makeMPintoPDFobject=\count297
+\everyMPtoPDFconversion=\toks22
+) (c:/texlive/2026/texmf-dist/tex/latex/epstopdf-pkg/epstopdf-base.sty
+Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
+Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
+85.
+
+(c:/texlive/2026/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg
+File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
+e
+))
+(c:/texlive/2026/texmf-dist/tex/latex/pdflscape/pdflscape.sty
+Package: pdflscape 2025-06-23 v0.14 Display of landscape pages in PDF
+
+(c:/texlive/2026/texmf-dist/tex/latex/pdflscape/pdflscape-nometadata.sty
+Package: pdflscape-nometadata 2025-06-23 v0.14 Display of landscape pages in PD
+F (HO)
+
+(c:/texlive/2026/texmf-dist/tex/generic/iftex/iftex.sty
+Package: iftex 2024/12/12 v1.0g TeX engine tests
+)
+(c:/texlive/2026/texmf-dist/tex/latex/graphics/lscape.sty
+Package: lscape 2020/05/28 v3.02 Landscape Pages (DPC)
+)
+Package pdflscape Info: Auto-detected driver: pdftex on input line 81.
+))
+<coverpage.pdf, id=1, 614.295pt x 794.97pt>
+File: coverpage.pdf Graphic file (type pdf)
+<use coverpage.pdf>
+Package pdftex.def Info: coverpage.pdf  used on input line 6.
+(pdftex.def)             Requested size: 614.29349pt x 794.96806pt.
+<coverpage.pdf, id=3, page=1, 614.295pt x 794.97pt>
+File: coverpage.pdf Graphic file (type pdf)
+<use coverpage.pdf, page 1>
+Package pdftex.def Info: coverpage.pdf , page1 used on input line 6.
+(pdftex.def)             Requested size: 614.29349pt x 794.96806pt.
+File: coverpage.pdf Graphic file (type pdf)
+<use coverpage.pdf, page 1>
+Package pdftex.def Info: coverpage.pdf , page1 used on input line 6.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: coverpage.pdf Graphic file (type pdf)
+<use coverpage.pdf, page 1>
+Package pdftex.def Info: coverpage.pdf , page1 used on input line 6.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: coverpage.pdf Graphic file (type pdf)
+<use coverpage.pdf, page 1>
+Package pdftex.def Info: coverpage.pdf , page1 used on input line 6.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: coverpage.pdf Graphic file (type pdf)
+<use coverpage.pdf, page 1>
+Package pdftex.def Info: coverpage.pdf , page1 used on input line 6.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+ [1
+
+
+ <./coverpage.pdf{c:/texlive/2026/texmf-var/fonts/map/pdftex/updmap/pdftex.map}
+>]
+<main.pdf, id=22, 614.295pt x 794.97pt>
+File: main.pdf Graphic file (type pdf)
+<use main.pdf>
+Package pdftex.def Info: main.pdf  used on input line 7.
+(pdftex.def)             Requested size: 614.29349pt x 794.96806pt.
+<main.pdf, id=24, page=1, 614.295pt x 794.97pt>
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 1>
+Package pdftex.def Info: main.pdf , page1 used on input line 7.
+(pdftex.def)             Requested size: 614.29349pt x 794.96806pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 1>
+Package pdftex.def Info: main.pdf , page1 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 1>
+Package pdftex.def Info: main.pdf , page1 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 1>
+Package pdftex.def Info: main.pdf , page1 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 1>
+Package pdftex.def Info: main.pdf , page1 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+ [2
+
+ <./main.pdf>]
+<main.pdf, id=63, page=2, 614.295pt x 794.97pt>
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 2>
+Package pdftex.def Info: main.pdf , page2 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 2>
+Package pdftex.def Info: main.pdf , page2 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 2>
+Package pdftex.def Info: main.pdf , page2 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+ [3
+
+ <./main.pdf>]
+<main.pdf, id=79, page=3, 614.295pt x 794.97pt>
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 3>
+Package pdftex.def Info: main.pdf , page3 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 3>
+Package pdftex.def Info: main.pdf , page3 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 3>
+Package pdftex.def Info: main.pdf , page3 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+ [4
+
+ <./main.pdf>]
+<main.pdf, id=86, page=4, 614.295pt x 794.97pt>
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 4>
+Package pdftex.def Info: main.pdf , page4 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 4>
+Package pdftex.def Info: main.pdf , page4 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 4>
+Package pdftex.def Info: main.pdf , page4 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+ [5
+
+ <./main.pdf>]
+<main.pdf, id=100, page=5, 614.295pt x 794.97pt>
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 5>
+Package pdftex.def Info: main.pdf , page5 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 5>
+Package pdftex.def Info: main.pdf , page5 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 5>
+Package pdftex.def Info: main.pdf , page5 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+ [6
+
+ <./main.pdf>]
+<main.pdf, id=111, page=6, 614.295pt x 794.97pt>
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 6>
+Package pdftex.def Info: main.pdf , page6 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 6>
+Package pdftex.def Info: main.pdf , page6 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 6>
+Package pdftex.def Info: main.pdf , page6 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+
+[7
+
+ <./main.pdf>]
+<main.pdf, id=125, page=7, 614.295pt x 794.97pt>
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 7>
+Package pdftex.def Info: main.pdf , page7 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 7>
+Package pdftex.def Info: main.pdf , page7 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 7>
+Package pdftex.def Info: main.pdf , page7 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+ [8
+
+ <./main.pdf>]
+<main.pdf, id=138, page=8, 614.295pt x 794.97pt>
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 8>
+Package pdftex.def Info: main.pdf , page8 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 8>
+Package pdftex.def Info: main.pdf , page8 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 8>
+Package pdftex.def Info: main.pdf , page8 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+ [9
+
+ <./main.pdf>]
+<main.pdf, id=151, page=9, 614.295pt x 794.97pt>
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 9>
+Package pdftex.def Info: main.pdf , page9 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 9>
+Package pdftex.def Info: main.pdf , page9 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 9>
+Package pdftex.def Info: main.pdf , page9 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+ [10
+
+ <./main.pdf>]
+<main.pdf, id=194, page=10, 614.295pt x 794.97pt>
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 10>
+Package pdftex.def Info: main.pdf , page10 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 10>
+Package pdftex.def Info: main.pdf , page10 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 10>
+Package pdftex.def Info: main.pdf , page10 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+ [11
+
+ <./main.pdf>]
+<main.pdf, id=217, page=11, 614.295pt x 794.97pt>
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 11>
+Package pdftex.def Info: main.pdf , page11 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 11>
+Package pdftex.def Info: main.pdf , page11 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 11>
+Package pdftex.def Info: main.pdf , page11 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+ [12
+
+ <./main.pdf>]
+<main.pdf, id=224, page=12, 614.295pt x 794.97pt>
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 12>
+Package pdftex.def Info: main.pdf , page12 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 12>
+Package pdftex.def Info: main.pdf , page12 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 12>
+Package pdftex.def Info: main.pdf , page12 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+ [13
+
+ <./main.pdf>]
+<main.pdf, id=229, page=13, 614.295pt x 794.97pt>
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 13>
+Package pdftex.def Info: main.pdf , page13 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 13>
+Package pdftex.def Info: main.pdf , page13 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 13>
+Package pdftex.def Info: main.pdf , page13 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+ [14
+
+ <./main.pdf>]
+<main.pdf, id=233, page=14, 614.295pt x 794.97pt>
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 14>
+Package pdftex.def Info: main.pdf , page14 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 14>
+Package pdftex.def Info: main.pdf , page14 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+File: main.pdf Graphic file (type pdf)
+<use main.pdf, page 14>
+Package pdftex.def Info: main.pdf , page14 used on input line 7.
+(pdftex.def)             Requested size: 614.58406pt x 795.3441pt.
+ [15
+
+ <./main.pdf>] (./final_with_cover.aux)
+ ***********
+LaTeX2e <2025-11-01>
+L3 programming layer <2026-04-28>
+ ***********
+ ) 
+Here is how much of TeX's memory you used:
+ 3133 strings out of 467341
+ 49498 string characters out of 5419596
+ 464690 words of memory out of 5000000
+ 32229 multiletter control sequences out of 15000+600000
+ 627721 words of font info for 40 fonts, out of 8000000 for 9000
+ 1141 hyphenation exceptions out of 8191
+ 72i,17n,90p,233b,449s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<c:/texlive/2026/texmf-dist/fonts/type1/public/inconsolata/Inconsolata-zi4b.p
+fb><c:/texlive/2026/texmf-dist/fonts/type1/public/inconsolata/Inconsolata-zi4r.
+pfb><c:/texlive/2026/texmf-dist/fonts/type1/public/newtx/LibertineMathMI.pfb><c
+:/texlive/2026/texmf-dist/fonts/type1/public/newtx/LibertineMathMI7.pfb><c:/tex
+live/2026/texmf-dist/fonts/type1/public/libertine/LinBiolinumT.pfb><c:/texlive/
+2026/texmf-dist/fonts/type1/public/libertine/LinBiolinumTB.pfb><c:/texlive/2026
+/texmf-dist/fonts/type1/public/libertine/LinLibertineT.pfb><c:/texlive/2026/tex
+mf-dist/fonts/type1/public/libertine/LinLibertineTB.pfb><c:/texlive/2026/texmf-
+dist/fonts/type1/public/libertine/LinLibertineTI.pfb><c:/texlive/2026/texmf-dis
+t/fonts/type1/public/newtx/txmiaX.pfb><c:/texlive/2026/texmf-dist/fonts/type1/p
+ublic/newtx/txsys.pfb><c:/texlive/2026/texmf-dist/fonts/type1/urw/times/utmb8a.
+pfb><c:/texlive/2026/texmf-dist/fonts/type1/urw/times/utmr8a.pfb>
+Output written on final_with_cover.pdf (15 pages, 4118881 bytes).
+PDF statistics:
+ 254 PDF objects out of 1000 (max. 8388607)
+ 117 compressed objects within 2 object streams
+ 0 named destinations out of 1000 (max. 500000)
+ 96 words of extra memory for PDF output out of 10000 (max. 10000000)
+
